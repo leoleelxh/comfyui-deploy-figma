@@ -54,7 +54,7 @@ export function RunWorkflowInline({
     setStatus("preparing");
     try {
       const origin = window.location.origin;
-      const a = await callServerPromise(
+      const result = await callServerPromise(
         createRun({
           origin,
           workflow_version_id: workflow_version_id,
@@ -63,12 +63,27 @@ export function RunWorkflowInline({
           runOrigin: "public-share",
         })
       );
-      if (a && !("error" in a)) {
-        setRunId(a.workflow_run_id);
-      } else {
-        setLoading2(false);
+
+      if (result && !("error" in result)) {
+        if (result.isLocalMachine) {
+          // 本地 ComfyUI 处理
+          const ws = new WebSocket('ws://127.0.0.1:8188/ws');
+          ws.onopen = () => {
+            ws.send(JSON.stringify({
+              type: 'execute',
+              data: {
+                workflow: result.workflow_api,
+                inputs: val,
+                prompt_id: result.workflow_run_id
+              }
+            }));
+          };
+        } else {
+          // 远程服务器处理，使用原有逻辑
+          setRunId(result.workflow_run_id);
+        }
       }
-      console.log(a);
+      
       setIsLoading(false);
     } catch (error) {
       setIsLoading(false);
