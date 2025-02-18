@@ -69,7 +69,7 @@ export function RunWorkflowInline({
       console.log("createRun result:", result);
 
       if (result && !("error" in result)) {
-        if (result.isLocalMachine) {
+        if (result.isLocalMachine && result.endpoint && result.workflow_api) {
           console.log("Connecting to local ComfyUI...", result.endpoint);
           
           const wsEndpoint = result.endpoint.replace('http://', 'ws://');

@@ -17,6 +17,14 @@ import "server-only";
 import { v4 } from "uuid";
 import { withServerPromise } from "./withServerPromise";
 
+type CreateRunResult = {
+  workflow_run_id: string;
+  message: string;
+  isLocalMachine: boolean;
+  endpoint?: string;
+  workflow_api?: any;
+};
+
 export const createRun = withServerPromise(
   async ({
     origin,
@@ -32,7 +40,7 @@ export const createRun = withServerPromise(
     inputs?: Record<string, string | number>;
     runOrigin?: WorkflowRunOriginType;
     apiUser?: APIKeyUserType;
-  }) => {
+  }): Promise<CreateRunResult> => {
     const machine =
       typeof machine_id === "string"
         ? await db.query.machinesTable.findFirst({
