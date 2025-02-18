@@ -85,18 +85,10 @@ export function RunWorkflowInline({
               try {
                 const message = {
                   "prompt": result.workflow_api,
-                  "client_id": result.workflow_run_id,
-                  "extra_data": {
-                    "extra_pnginfo": {
-                      "workflow": result.workflow_api
-                    }
-                  }
+                  "client_id": result.workflow_run_id
                 };
 
-                ws.send(JSON.stringify({
-                  type: 'execute',
-                  data: message
-                }));
+                ws.send(JSON.stringify(message));
 
                 console.log("Sent workflow:", message);
               } catch (error) {
@@ -112,15 +104,22 @@ export function RunWorkflowInline({
 
             ws.onmessage = (event) => {
               console.log("Received message:", event.data);
-              const data = JSON.parse(event.data);
-              
-              if (data.type === "executing") {
-                console.log("Workflow execution started");
-              } else if (data.type === "executed") {
-                console.log("Workflow execution completed");
-                setLoading2(false);
-              } else if (data.type === "progress") {
-                console.log("Progress:", data.data);
+              try {
+                const data = JSON.parse(event.data);
+                
+                if (data.type === "status") {
+                  console.log("Status update:", data.data);
+                  if (data.data.status.exec_info.queue_remaining === 0) {
+                    setLoading2(false);
+                  }
+                } else if (data.type === "progress") {
+                  console.log("Progress:", data.data);
+                } else if (data.type === "executed") {
+                  console.log("Execution complete");
+                  setLoading2(false);
+                }
+              } catch (error) {
+                console.error("Error parsing message:", error);
               }
             };
 
