@@ -139,7 +139,8 @@ export const createRun = withServerPromise(
       console.log("Detected local machine:", {
         id: machine.id,
         endpoint: machine.endpoint,
-        type: machine.type
+        type: machine.type,
+        workflow_api: workflow_version_data.workflow_api
       });
       
       // 验证 workflow_api 是否存在
@@ -147,7 +148,7 @@ export const createRun = withServerPromise(
         throw new Error("Workflow API data not found");
       }
 
-      // 添加运行状态 - 使用正确的状态值
+      // 添加运行状态
       await db
         .update(workflowRunsTable)
         .set({

@@ -72,7 +72,8 @@ export function RunWorkflowInline({
         if (result.isLocalMachine && result.endpoint && result.workflow_api) {
           console.log("Connecting to local ComfyUI...", {
             endpoint: result.endpoint,
-            workflow_run_id: result.workflow_run_id
+            workflow_run_id: result.workflow_run_id,
+            workflow_api: result.workflow_api
           });
           
           try {
@@ -82,14 +83,22 @@ export function RunWorkflowInline({
             ws.onopen = () => {
               console.log("WebSocket connected, sending workflow...");
               try {
+                const message = {
+                  "prompt": result.workflow_api,
+                  "client_id": result.workflow_run_id,
+                  "extra_data": {
+                    "extra_pnginfo": {
+                      "workflow": result.workflow_api
+                    }
+                  }
+                };
+
                 ws.send(JSON.stringify({
                   type: 'execute',
-                  data: {
-                    workflow: result.workflow_api,
-                    inputs: val,
-                    prompt_id: result.workflow_run_id
-                  }
+                  data: message
                 }));
+
+                console.log("Sent workflow:", message);
               } catch (error) {
                 console.error("Error sending workflow:", error);
                 setLoading2(false);
@@ -103,6 +112,16 @@ export function RunWorkflowInline({
 
             ws.onmessage = (event) => {
               console.log("Received message:", event.data);
+              const data = JSON.parse(event.data);
+              
+              if (data.type === "executing") {
+                console.log("Workflow execution started");
+              } else if (data.type === "executed") {
+                console.log("Workflow execution completed");
+                setLoading2(false);
+              } else if (data.type === "progress") {
+                console.log("Progress:", data.data);
+              }
             };
 
           } catch (error) {
