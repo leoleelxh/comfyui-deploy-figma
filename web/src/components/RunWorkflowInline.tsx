@@ -72,7 +72,8 @@ export function RunWorkflowInline({
         if (result.isLocalMachine) {
           console.log("Connecting to local ComfyUI...", result.endpoint);
           
-          const ws = new WebSocket('ws://127.0.0.1:8188/ws');
+          const wsEndpoint = result.endpoint.replace('http://', 'ws://');
+          const ws = new WebSocket(`${wsEndpoint}/ws`);
           
           ws.onopen = () => {
             console.log("WebSocket connected!");
