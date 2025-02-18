@@ -78,19 +78,29 @@ export function RunWorkflowInline({
           
           try {
             const wsEndpoint = result.endpoint.replace('http://', 'ws://');
+            console.log("WebSocket endpoint:", wsEndpoint);
+            
             const ws = new WebSocket(`${wsEndpoint}/ws`);
             
+            // 添加连接超时处理
+            const connectionTimeout = setTimeout(() => {
+              console.error("WebSocket connection timeout");
+              ws.close();
+              setLoading2(false);
+            }, 5000);
+            
             ws.onopen = () => {
+              clearTimeout(connectionTimeout);
               console.log("WebSocket connected, sending workflow...");
               try {
+                // 简化消息格式
                 const message = {
-                  "prompt": result.workflow_api,
-                  "client_id": result.workflow_run_id
+                  prompt: result.workflow_api,
+                  client_id: result.workflow_run_id
                 };
 
+                console.log("Sending message:", JSON.stringify(message, null, 2));
                 ws.send(JSON.stringify(message));
-
-                console.log("Sent workflow:", message);
               } catch (error) {
                 console.error("Error sending workflow:", error);
                 setLoading2(false);
@@ -98,25 +108,32 @@ export function RunWorkflowInline({
             };
 
             ws.onerror = (error) => {
+              clearTimeout(connectionTimeout);
               console.error("WebSocket error:", error);
               setLoading2(false);
             };
 
+            ws.onclose = (event) => {
+              clearTimeout(connectionTimeout);
+              console.log("WebSocket closed:", event.code, event.reason);
+              setLoading2(false);
+            };
+
             ws.onmessage = (event) => {
-              console.log("Received message:", event.data);
+              console.log("Raw message received:", event.data);
               try {
                 const data = JSON.parse(event.data);
+                console.log("Parsed message:", data);
                 
                 if (data.type === "status") {
                   console.log("Status update:", data.data);
-                  if (data.data.status.exec_info.queue_remaining === 0) {
-                    setLoading2(false);
-                  }
                 } else if (data.type === "progress") {
                   console.log("Progress:", data.data);
                 } else if (data.type === "executed") {
                   console.log("Execution complete");
                   setLoading2(false);
+                } else {
+                  console.log("Unknown message type:", data.type);
                 }
               } catch (error) {
                 console.error("Error parsing message:", error);
