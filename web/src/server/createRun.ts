@@ -128,6 +128,8 @@ export const createRun = withServerPromise(
       machine.type === "classic" && 
       (machine.endpoint.includes("localhost") || machine.endpoint.includes("127.0.0.1"))
     ) {
+      console.log("Detected local machine:", machine);
+      
       // 本地 ComfyUI，返回特殊标记
       return {
         workflow_run_id: workflow_run[0].id,
@@ -137,6 +139,7 @@ export const createRun = withServerPromise(
         workflow_api: workflow_version_data.workflow_api
       };
     } else {
+      console.log("Using remote machine:", machine.type);
       // 远程服务器，使用原有逻辑
       try {
         switch (machine.type) {
