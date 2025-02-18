@@ -102,6 +102,13 @@ export const createRun = withServerPromise(
 
     const prompt_id = v4();
 
+    // 定义共享数据
+    const shareData = {
+      workflow_api_raw: workflow_api,
+      status_endpoint: `${origin}/api/update-run`,
+      file_upload_endpoint: `${origin}/api/file-upload`,
+    };
+
     // Add to our db
     const workflow_run = await db
       .insert(workflowRunsTable)
@@ -125,7 +132,7 @@ export const createRun = withServerPromise(
       return {
         workflow_run_id: workflow_run[0].id,
         message: "Workflow queued",
-        isLocalMachine: true,  // 添加标记
+        isLocalMachine: true,
         endpoint: machine.endpoint,
         workflow_api: workflow_version_data.workflow_api
       };
