@@ -11,6 +11,7 @@ const Request = z.object({
 });
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60; // 改回 60 秒
 
 export async function GET(request: Request) {
   const [data, error] = await parseDataSafe(Request, request);

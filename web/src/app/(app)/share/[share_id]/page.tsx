@@ -22,7 +22,8 @@ import { auth, clerkClient } from "@clerk/nextjs/server";
 import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 
-export const maxDuration = 300; // 5 minutes
+export const dynamic = "force-dynamic";
+export const maxDuration = 60; // 改回 60 秒
 
 export default async function Page({
 	params,
