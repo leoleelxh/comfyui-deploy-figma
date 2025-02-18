@@ -136,12 +136,29 @@ export const createRun = withServerPromise(
       machine.type === "classic" && 
       (machine.endpoint.includes("localhost") || machine.endpoint.includes("127.0.0.1"))
     ) {
-      console.log("Detected local machine:", machine);
+      console.log("Detected local machine:", {
+        id: machine.id,
+        endpoint: machine.endpoint,
+        type: machine.type
+      });
       
-      // 本地 ComfyUI，返回特殊标记
+      // 验证 workflow_api 是否存在
+      if (!workflow_version_data.workflow_api) {
+        throw new Error("Workflow API data not found");
+      }
+
+      // 添加运行状态
+      await db
+        .update(workflowRunsTable)
+        .set({
+          status: "queued",
+          started_at: new Date(),
+        })
+        .where(eq(workflowRunsTable.id, workflow_run[0].id));
+
       return {
         workflow_run_id: workflow_run[0].id,
-        message: "Workflow queued",
+        message: "Workflow queued for local execution",
         isLocalMachine: true,
         endpoint: machine.endpoint,
         workflow_api: workflow_version_data.workflow_api

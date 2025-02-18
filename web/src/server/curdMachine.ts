@@ -15,6 +15,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import "server-only";
 import type { z } from "zod";
+import { deploymentsTable } from "@/db/schema";
 
 export async function getMachines() {
   const { userId, orgId } = auth();
@@ -244,42 +245,37 @@ export const updateMachine = withServerPromise(
   }
 );
 
-export const deleteMachine = withServerPromise(
-  async (machine_id: string): Promise<{ message: string }> => {
-    const machine = await db.query.machinesTable.findFirst({
-      where: eq(machinesTable.id, machine_id),
-    });
+export async function deleteMachine(id: string) {
+  const { userId } = auth();
+  if (!userId) throw new Error("User not found");
 
-    if (machine?.type === "comfy-deploy-serverless") {
-      // Call remote builder to stop the app on modal
-      const result = await fetch(`${process.env.MODAL_BUILDER_URL!}/stop-app`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          machine_id: machine_id,
-        }),
-      });
+  // 1. 先检查是否有关联的部署
+  const deployments = await db.query.deploymentsTable.findMany({
+    where: eq(deploymentsTable.machine_id, id),
+  });
 
-      if (!result.ok) {
-        const error_log = await result.text();
-        throw new Error(`Error: ${result.statusText} ${error_log}`);
-      }
-    }
-
-    await db.delete(machinesTable).where(eq(machinesTable.id, machine_id));
-    revalidatePath("/machines");
-    return { message: "Machine Deleted" };
+  if (deployments.length > 0) {
+    throw new Error("Cannot delete machine: It is being used by deployments");
   }
-);
+
+  // 2. 如果没有关联部署，则软删除机器
+  await db
+    .update(machinesTable)
+    .set({
+      disabled: true,  // 使用软删除而不是真删除
+      updated_at: new Date(),
+    })
+    .where(eq(machinesTable.id, id));
+
+  revalidatePath("/machines");
+}
 
 export const disableMachine = withServerPromise(
   async (machine_id: string): Promise<{ message: string }> => {
     await db
       .update(machinesTable)
       .set({
-        disabled: true,
+        disabled: false,
       })
       .where(eq(machinesTable.id, machine_id));
     revalidatePath("/machines");

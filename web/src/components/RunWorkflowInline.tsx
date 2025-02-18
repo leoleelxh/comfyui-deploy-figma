@@ -70,32 +70,45 @@ export function RunWorkflowInline({
 
       if (result && !("error" in result)) {
         if (result.isLocalMachine && result.endpoint && result.workflow_api) {
-          console.log("Connecting to local ComfyUI...", result.endpoint);
+          console.log("Connecting to local ComfyUI...", {
+            endpoint: result.endpoint,
+            workflow_run_id: result.workflow_run_id
+          });
           
-          const wsEndpoint = result.endpoint.replace('http://', 'ws://');
-          const ws = new WebSocket(`${wsEndpoint}/ws`);
-          
-          ws.onopen = () => {
-            console.log("WebSocket connected!");
-            ws.send(JSON.stringify({
-              type: 'execute',
-              data: {
-                workflow: result.workflow_api,
-                inputs: val,
-                prompt_id: result.workflow_run_id
+          try {
+            const wsEndpoint = result.endpoint.replace('http://', 'ws://');
+            const ws = new WebSocket(`${wsEndpoint}/ws`);
+            
+            ws.onopen = () => {
+              console.log("WebSocket connected, sending workflow...");
+              try {
+                ws.send(JSON.stringify({
+                  type: 'execute',
+                  data: {
+                    workflow: result.workflow_api,
+                    inputs: val,
+                    prompt_id: result.workflow_run_id
+                  }
+                }));
+              } catch (error) {
+                console.error("Error sending workflow:", error);
+                setLoading2(false);
               }
-            }));
-          };
+            };
 
-          ws.onerror = (error) => {
-            console.error("WebSocket error:", error);
+            ws.onerror = (error) => {
+              console.error("WebSocket error:", error);
+              setLoading2(false);
+            };
+
+            ws.onmessage = (event) => {
+              console.log("Received message:", event.data);
+            };
+
+          } catch (error) {
+            console.error("Error creating WebSocket:", error);
             setLoading2(false);
-          };
-
-          ws.onclose = () => {
-            console.log("WebSocket connection closed");
-          };
-
+          }
         } else {
           console.log("Using remote execution...");
           setRunId(result.workflow_run_id);
