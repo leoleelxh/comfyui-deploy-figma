@@ -147,11 +147,11 @@ export const createRun = withServerPromise(
         throw new Error("Workflow API data not found");
       }
 
-      // 添加运行状态
+      // 添加运行状态 - 使用正确的状态值
       await db
         .update(workflowRunsTable)
         .set({
-          status: "queued",
+          status: "running",
           started_at: new Date(),
         })
         .where(eq(workflowRunsTable.id, workflow_run[0].id));
