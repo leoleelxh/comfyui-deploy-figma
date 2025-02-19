@@ -1,6 +1,8 @@
 这是fork出来的，原项目是https://github.com/BennyKok/comfyui-deploy
 会汉化！
 
+localhost方法不成功！
+
 # ComfyUI Deploy
 
 Open source comfyui deployment platform, a `vercel` for generative workflow infra. (serverless hosted gpu with vertical intergation with comfyui)
