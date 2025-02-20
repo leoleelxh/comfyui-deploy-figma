@@ -1,7 +1,7 @@
-这是fork出来的，原项目是https://github.com/BennyKok/comfyui-deploy
+这是 fork 出来的，原项目是https://github.com/BennyKok/comfyui-deploy
 会汉化！
 
-localhost方法不成功！
+localhost 方法不成功！
 
 # ComfyUI Deploy
 
@@ -104,7 +104,6 @@ Major areas
 [![Video](https://img.mytsi.org/i/nFOG479.png)](https://www.youtube.com/watch?v=hWvsEY1cS2M)
 Tutorial Created by [Ross](https://github.com/rossman22590) and [Syn](https://github.com/mortlsyn)
 
-
 Build command
 
 ```
@@ -148,3 +147,372 @@ SPACES_REGION="nyc3"
 SPACES_CDN_DONT_INCLUDE_BUCKET="false"
 SPACES_CDN_FORCE_PATH_STYLE="true"
 ```
+
+# ComfyUI Deploy API Documentation
+
+## Architecture Overview
+
+### Core Components
+
+- **Web Server**: Next.js + Hono (API Routes)
+- **Database**: PostgreSQL + Drizzle ORM
+- **Storage**: Cloudflare R2
+- **ComfyUI Integration**: Custom Python Server
+
+### Directory Structure
+
+```
+web/
+├── src/
+│   ├── app/
+│   │   └── (app)/api/         # API Routes
+│   ├── routes/                # Hono Route Handlers
+│   ├── server/                # Business Logic
+│   └── db/                    # Database Schema & Queries
+├── test/                      # API Tests
+└── comfyui-deploy/           # ComfyUI Integration
+```
+
+## API Flow
+
+### Workflow Execution Flow
+
+```mermaid
+sequenceDiagram
+    Client->>+API: POST /api/run
+    API->>Database: Create Run Record
+    API->>ComfyUI: Send Workflow
+    ComfyUI->>ComfyUI: Execute Workflow
+    ComfyUI->>R2 Storage: Upload Images
+    ComfyUI->>API: POST /api/update-run
+    API->>Database: Update Status & Outputs
+    Client->>API: GET /api/status/{run_id}
+    API->>Client: Return Results
+```
+
+### Status Lifecycle
+
+```
+not-started -> running -> uploading -> success
+                      \-> failed
+```
+
+## API Endpoints
+
+### Create Run
+
+```typescript
+POST /api/run
+Content-Type: application/json
+Authorization: Bearer <API_TOKEN>
+
+{
+  "deployment_id": "string",
+  "inputs": {
+    "text_input": "string"
+  }
+}
+
+Response:
+{
+  "run_id": "uuid"
+}
+```
+
+### Get Run Status
+
+```typescript
+GET /api/status/{run_id}
+Authorization: Bearer <API_TOKEN>
+
+Response:
+{
+  "id": "string",
+  "status": "not-started" | "running" | "uploading" | "success" | "failed",
+  "started_at": "datetime",
+  "ended_at": "datetime",
+  "duration": number,
+  "outputs": [{
+    "images": [{
+      "url": "string",
+      "type": "output",
+      "filename": "string",
+      "subfolder": "string",
+      "upload_duration": number
+    }],
+    "created_at": "datetime"
+  }],
+  "error": "string",
+  "progress": {
+    "current": number,
+    "total": number,
+    "message": "string"
+  }
+}
+```
+
+### Update Run Status (Internal)
+
+```typescript
+POST /api/update-run
+Content-Type: application/json
+
+{
+  "run_id": "string",
+  "output_data": {
+    "images": [{
+      "filename": "string",
+      "data": "base64"
+    }]
+  }
+}
+```
+
+## Implementation Details
+
+### Database Schema
+
+```typescript
+// Key Tables
+workflowRunsTable {
+  id: uuid
+  workflow_version_id: uuid
+  status: enum
+  started_at: timestamp
+  ended_at: timestamp
+}
+
+workflowRunOutputs {
+  id: uuid
+  run_id: uuid
+  data: jsonb
+}
+```
+
+### Image Processing Flow
+
+1. ComfyUI generates images
+2. Images uploaded to R2 Storage
+3. URLs constructed: `${CDN_ENDPOINT}/outputs/runs/${run_id}/${filename}`
+4. URLs stored in database with run outputs
+
+### Environment Configuration
+
+```env
+SPACES_ENDPOINT="https://xxx.r2.cloudflarestorage.com"
+SPACES_ENDPOINT_CDN="https://pub-xxx.r2.dev"
+SPACES_BUCKET="comfyui-deploy"
+SPACES_KEY="xxx"
+SPACES_SECRET="xxx"
+```
+
+## Usage Example
+
+```typescript
+import axios from "axios";
+
+const API_BASE = "http://localhost:3000/api";
+const headers = {
+  Authorization: `Bearer ${API_TOKEN}`,
+  "Content-Type": "application/json",
+};
+
+// Create run
+const runResponse = await axios.post(
+  `${API_BASE}/run`,
+  {
+    deployment_id,
+    inputs: { text_input: "test generation" },
+  },
+  { headers }
+);
+
+// Poll status
+async function pollRunStatus(run_id: string) {
+  while (true) {
+    const { data } = await axios.get(`${API_BASE}/status/${run_id}`, {
+      headers,
+    });
+
+    if (data.status === "success") {
+      return data;
+    }
+
+    if (data.status === "failed") {
+      throw new Error(data.error);
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+  }
+}
+
+const result = await pollRunStatus(runResponse.data.run_id);
+console.log("Images:", result.images);
+```
+
+## Error Handling
+
+- API returns appropriate HTTP status codes
+- Failed runs include error details in status response
+- Image upload failures still return valid CDN URLs
+
+## Security
+
+- API requires Bearer token authentication
+- Tokens can be created and managed via API keys
+- Rate limiting applied to public endpoints
+
+## Project Architecture
+
+### Core Structure
+
+```
+.
+├── web/                       # Web Application
+│   ├── src/
+│   │   ├── app/              # Next.js App Router
+│   │   │   ├── (app)/       # Main Application
+│   │   │   │   ├── api/     # API Endpoints
+│   │   │   │   ├── workflows/ # Workflow UI
+│   │   │   │   └── machines/ # Machine Management
+│   │   │   └── (docs)/      # Documentation
+│   │   ├── components/       # React Components
+│   │   ├── routes/          # API Route Handlers
+│   │   ├── server/          # Business Logic
+│   │   ├── db/              # Database Layer
+│   │   ├── lib/             # Utilities
+│   │   └── types/           # TypeScript Types
+│   ├── public/              # Static Assets
+│   ├── test/                # API Tests
+│   └── drizzle/             # Database Migrations
+├── comfy-nodes/             # ComfyUI Custom Nodes
+├── builder/                 # Build System
+└── web-plugin/             # ComfyUI Web Plugin
+```
+
+### Component Details
+
+#### 1. Web Application (`web/`)
+
+- **Frontend (`src/components/`)**
+
+  - `ui/`: Base UI components (shadcn/ui)
+  - `RunDisplay.tsx`: Execution status
+  - `WorkflowList.tsx`: Workflow management
+  - `MachineList.tsx`: Machine management
+  - `custom-form/`: Custom form components
+  - `docs/`: Documentation components
+
+- **API Layer (`src/app/(app)/api/`)**
+
+  - `update-run/`: ComfyUI callback handling
+  - `file-upload/`: Image upload processing
+  - `machine-built/`: Machine build status
+  - `view/`: Image serving
+
+- **Route Handlers (`src/routes/`)**
+
+  - `registerGetStatusRoute.ts`: Status polling
+  - `registerCreateRunRoute.ts`: Run creation
+  - `registerDeploymentsRoute.ts`: Deployment management
+  - `registerUploadRoute.ts`: File uploads
+
+- **Server Logic (`src/server/`)**
+
+  - `createRun.ts`: Workflow execution
+  - `curdApiKeys.ts`: API key management
+  - `curdMachine.ts`: Machine management
+  - `getFileDownloadUrl.ts`: Storage URLs
+  - `editWorkflowOnMachine.tsx`: Workflow editing
+
+- **Database (`src/db/`)**
+  - `schema.ts`: Data models
+  - `db.ts`: Database connection
+  - Migration files in `drizzle/`
+
+#### 2. ComfyUI Integration (`comfy-nodes/`)
+
+- Custom node implementations:
+  - Input nodes (text, image, number, etc.)
+  - Output nodes (image, websocket)
+  - Model handling nodes
+  - External resource nodes
+
+#### 3. Build System (`builder/`)
+
+- `modal-builder/`: Modal.com serverless builder
+  - Dockerfile configuration
+  - Build requirements
+  - Template system
+
+#### 4. Web Plugin (`web-plugin/`)
+
+- ComfyUI web interface integration
+
+### Data Flow Architecture
+
+1. **Workflow Creation & Execution**
+
+```mermaid
+graph TD
+    A[Client UI] --> B[API Routes]
+    B --> C[Route Handlers]
+    C --> D[Server Logic]
+    D --> E[Database]
+    D --> F[ComfyUI]
+    F --> G[Custom Nodes]
+    G --> H[R2 Storage]
+    H --> I[Callback API]
+    I --> E
+```
+
+2. **Machine Management**
+
+```mermaid
+graph TD
+    A[Admin UI] --> B[Machine API]
+    B --> C[Builder Service]
+    C --> D[Modal/RunPod]
+    D --> E[ComfyUI Instance]
+    E --> F[Status Update]
+    F --> G[Database]
+```
+
+### Key Features
+
+1. **Workflow Management**
+
+- Version control
+- Custom node support
+- Real-time status updates
+- Input validation
+
+2. **Machine Management**
+
+- Multiple provider support
+  - Modal.com
+  - RunPod
+  - Custom servers
+- Auto-scaling
+- Health monitoring
+
+3. **Storage System**
+
+- Cloudflare R2 integration
+- CDN delivery
+- Image processing
+- Version management
+
+4. **Security**
+
+- JWT authentication
+- API key management
+- Role-based access
+- Request validation
+
+### Development Tools
+
+- `drizzle/`: SQL migrations
+- `test/`: API testing
+- `aws/`: Cloud configuration
+- Development containers
