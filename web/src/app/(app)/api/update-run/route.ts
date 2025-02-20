@@ -6,6 +6,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 const CDN_ENDPOINT = process.env.SPACES_ENDPOINT_CDN;
+const BUCKET = process.env.SPACES_BUCKET;
 
 const Request = z.object({
   run_id: z.string(),
@@ -27,11 +28,11 @@ export async function POST(request: Request) {
     // 处理图片数据
     if (output_data.images) {
       for (const image of output_data.images) {
-        // 构建标准的 CDN URL
-        image.url = `${CDN_ENDPOINT}/outputs/runs/${run_id}/${image.filename}`;
+        // 构建标准的 CDN URL，加入 bucket 名称
+        image.url = `${CDN_ENDPOINT}/${BUCKET}/outputs/runs/${run_id}/${image.filename}`;
         // 如果有缩略图
         if (image.thumbnail) {
-          image.thumbnail_url = `${CDN_ENDPOINT}/outputs/runs/${run_id}/thumbnails/${image.filename}`;
+          image.thumbnail_url = `${CDN_ENDPOINT}/${BUCKET}/outputs/runs/${run_id}/thumbnails/${image.filename}`;
         }
         // 删除原始数据
         if (image.data) {

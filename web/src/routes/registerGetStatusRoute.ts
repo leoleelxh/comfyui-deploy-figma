@@ -50,6 +50,7 @@ export const registerGetStatusRoute = (app: App) => {
   app.openapi(route, async (c) => {
     const { run_id } = c.req.param();
     const CDN_ENDPOINT = process.env.SPACES_ENDPOINT_CDN;
+    const BUCKET = process.env.SPACES_BUCKET;
     
     console.log('Fetching status for run:', run_id);
 
@@ -88,8 +89,8 @@ export const registerGetStatusRoute = (app: App) => {
         })),
         images: images.map((image: any) => ({
           ...image,
-          url: image.url || `${CDN_ENDPOINT}/outputs/runs/${run_id}/${image.filename}`,
-          thumbnail_url: image.thumbnail_url || `${CDN_ENDPOINT}/outputs/runs/${run_id}/thumbnails/${image.filename}`
+          url: image.url || `${CDN_ENDPOINT}/${BUCKET}/outputs/runs/${run_id}/${image.filename}`,
+          thumbnail_url: image.thumbnail_url || `${CDN_ENDPOINT}/${BUCKET}/outputs/runs/${run_id}/thumbnails/${image.filename}`
         })),
         error: run.status === 'failed' ? run.outputs[run.outputs.length - 1]?.data?.error : undefined,
         progress: {

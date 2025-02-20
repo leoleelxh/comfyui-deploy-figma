@@ -516,3 +516,41 @@ graph TD
 - `test/`: API testing
 - `aws/`: Cloud configuration
 - Development containers
+
+## Development Setup
+
+### Storage Configuration
+
+#### Production (Cloudflare R2)
+
+```env
+SPACES_ENDPOINT="https://xxx.r2.cloudflarestorage.com"
+SPACES_ENDPOINT_CDN="https://pub-xxx.r2.dev"
+SPACES_BUCKET="comfyui-deploy"
+SPACES_KEY="your-key"
+SPACES_SECRET="your-secret"
+SPACES_CDN_DONT_INCLUDE_BUCKET="false"
+SPACES_CDN_FORCE_PATH_STYLE="false"
+```
+
+#### Local Development (LocalStack)
+
+```env
+SPACES_ENDPOINT="http://172.26.61.86:4566"
+SPACES_ENDPOINT_CDN="http://172.26.61.86:4566"
+SPACES_BUCKET="comfyui-deploy"
+SPACES_KEY="test"
+SPACES_SECRET="test"
+SPACES_REGION="us-east-1"
+SPACES_CDN_DONT_INCLUDE_BUCKET="false"
+SPACES_CDN_FORCE_PATH_STYLE="true"
+```
+
+> Note: When running ComfyUI on Windows with LocalStack in WSL2, use the WSL2 IP address instead of localhost.
+
+### Image Processing Flow
+
+1. ComfyUI generates images
+2. Images uploaded to storage (R2 or LocalStack)
+3. URLs constructed: `${CDN_ENDPOINT}/${BUCKET}/outputs/runs/${run_id}/${filename}`
+4. URLs stored in database with run outputs

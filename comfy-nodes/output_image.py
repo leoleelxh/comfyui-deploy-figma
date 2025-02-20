@@ -65,7 +65,8 @@ class ComfyDeployOutputImage:
                 for x in extra_pnginfo:
                     metadata.add_text(x, json.dumps(extra_pnginfo[x]))
 
-            filename_with_batch_num = filename.replace("%batch_num%", str(batch_number))
+            filename_with_batch_num = filename.replace(
+                "%batch_num%", str(batch_number))
             file = f"{filename_with_batch_num}_{counter:05}_.{file_type}"
             file_path = os.path.join(full_output_folder, file)
 
