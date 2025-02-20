@@ -75,6 +75,12 @@ export const registerGetStatusRoute = (app: App) => {
       const imageOutputs = run.outputs.find(output => output.data?.images);
       const images = imageOutputs?.data?.images || [];
 
+      // 检查 update-run 是否正确更新了状态
+      console.log('Run outputs:', run.outputs.map(output => ({
+        data: output.data,
+        created_at: output.created_at
+      })));
+
       const response = {
         id: run.id,
         status: run.status,
@@ -96,6 +102,7 @@ export const registerGetStatusRoute = (app: App) => {
         progress: {
           current: run.status === 'success' ? 100 : 
                   run.status === 'failed' ? 0 :
+                  run.status === 'uploading' ? 75 :
                   run.status === 'running' ? 50 : 0,
           total: 100,
           message: getProgressMessage(run.status)
@@ -105,7 +112,8 @@ export const registerGetStatusRoute = (app: App) => {
       console.log('Returning response:', {
         status: response.status,
         images_count: response.images.length,
-        outputs_count: response.outputs.length
+        outputs_count: response.outputs.length,
+        first_image_url: response.images[0]?.url
       });
 
       return c.json(response);

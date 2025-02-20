@@ -5,6 +5,8 @@ import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+const CDN_ENDPOINT = process.env.SPACES_ENDPOINT_CDN;
+
 const Request = z.object({
   run_id: z.string(),
   status: z
@@ -22,7 +24,24 @@ export async function POST(request: Request) {
   // console.log(run_id, status, output_data);
 
   if (output_data) {
-    const workflow_run_output = await db.insert(workflowRunOutputs).values({
+    // 处理图片数据
+    if (output_data.images) {
+      for (const image of output_data.images) {
+        // 构建标准的 CDN URL
+        image.url = `${CDN_ENDPOINT}/outputs/runs/${run_id}/${image.filename}`;
+        // 如果有缩略图
+        if (image.thumbnail) {
+          image.thumbnail_url = `${CDN_ENDPOINT}/outputs/runs/${run_id}/thumbnails/${image.filename}`;
+        }
+        // 删除原始数据
+        if (image.data) {
+          delete image.data;
+        }
+      }
+    }
+
+    // 保存输出记录
+    await db.insert(workflowRunOutputs).values({
       run_id: run_id,
       data: output_data,
     });
