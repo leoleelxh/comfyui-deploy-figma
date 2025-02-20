@@ -159,24 +159,9 @@ export const workflowRunsTable = dbSchema.table("workflow_runs", {
   started_at: timestamp("started_at"),
 });
 
-export const workflowRunRelations = relations(
-  workflowRunsTable,
-  ({ one, many }) => ({
-    machine: one(machinesTable, {
-      fields: [workflowRunsTable.machine_id],
-      references: [machinesTable.id],
-    }),
-    version: one(workflowVersionTable, {
-      fields: [workflowRunsTable.workflow_version_id],
-      references: [workflowVersionTable.id],
-    }),
-    outputs: many(workflowRunOutputs),
-    workflow: one(workflowTable, {
-      fields: [workflowRunsTable.workflow_id],
-      references: [workflowTable.id],
-    }),
-  }),
-);
+export const workflowRunsRelations = relations(workflowRunsTable, ({ many }) => ({
+  outputs: many(workflowRunOutputs),
+}));
 
 // We still want to keep the workflow run record.
 export const workflowRunOutputs = dbSchema.table("workflow_run_outputs", {

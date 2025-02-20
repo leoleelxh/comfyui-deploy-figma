@@ -11,6 +11,8 @@ import { registerWorkflowUploadRoute } from "@/routes/registerWorkflowUploadRout
 import { registerGetAuthResponse } from "@/routes/registerGetAuthResponse";
 import { registerGetWorkflowRoute } from "@/routes/registerGetWorkflow";
 import { cors } from "hono/cors";
+import { registerGetStatusRoute } from "@/routes/registerGetStatusRoute";
+
 export const dynamic = "force-dynamic";
 export const maxDuration = 60; // 60 seconds
 
@@ -96,6 +98,16 @@ app.openAPIRegistry.registerComponent("securitySchemes", "bearerAuth", {
   name: "Authorization",
   description:
     "API token created in Comfy Deploy <a href='/api-keys' target='_blank' style='text-decoration: underline;'>/api-keys</a>",
+});
+
+// Add status route
+app.use("/status/*", corsHandler, checkAuth);
+registerGetStatusRoute(app);
+
+// 添加调试日志
+app.use("*", async (c, next) => {
+  console.log('Request path:', c.req.path);
+  await next();
 });
 
 const handler = handle(app);
