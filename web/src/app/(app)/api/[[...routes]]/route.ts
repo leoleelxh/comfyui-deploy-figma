@@ -1,6 +1,7 @@
 import { registerCreateRunRoute } from "@/routes/registerCreateRunRoute";
 import { registerGetOutputRoute } from "@/routes/registerGetOutputRoute";
 import { registerUploadRoute } from "@/routes/registerUploadRoute";
+import { registerDeploymentsRoute } from "@/routes/registerDeploymentsRoute";
 import { isKeyRevoked } from "@/server/curdApiKeys";
 import { parseJWT } from "@/server/parseJWT";
 import type { Context, Next } from "hono";
@@ -59,6 +60,7 @@ const corsHandler = cors({
 // CORS Check
 app.use("/workflow", corsHandler, checkAuth);
 app.use("/workflow-version/*", corsHandler, checkAuth);
+app.use("/deployments", corsHandler, checkAuth);
 
 // create run endpoint
 registerCreateRunRoute(app);
@@ -66,6 +68,7 @@ registerGetOutputRoute(app);
 
 // file upload endpoint
 registerUploadRoute(app);
+registerDeploymentsRoute(app);
 
 // Anon
 registerGetAuthResponse(app);
