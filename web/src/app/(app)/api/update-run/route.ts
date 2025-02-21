@@ -14,13 +14,14 @@ const Request = z.object({
     .enum(["not-started", "running", "uploading", "success", "failed"])
     .optional(),
   output_data: z.any().optional(),
+  inputs: z.record(z.union([z.string(), z.number()])).optional(),
 });
 
 export async function POST(request: Request) {
   const [data, error] = await parseDataSafe(Request, request);
   if (!data || error) return error;
 
-  const { run_id, status, output_data } = data;
+  const { run_id, status, output_data, inputs } = data;
 
   // console.log(run_id, status, output_data);
 
@@ -38,6 +39,13 @@ export async function POST(request: Request) {
         if (image.data) {
           delete image.data;
         }
+      }
+    }
+
+    // 处理滑块参数
+    if (inputs) {
+      if (inputs.ComfyUIDeployExternalNumberSlider) {
+        // 处理滑块的逻辑
       }
     }
 

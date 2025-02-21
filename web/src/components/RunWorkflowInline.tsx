@@ -48,7 +48,10 @@ export function RunWorkflowInline({
     }
     console.log(values);
 
-    const val = Object.keys(values).length > 0 ? values : undefined;
+    const val = {
+      ...values,
+      ComfyUIDeployExternalNumberSlider: values.ComfyUIDeployExternalNumberSlider,
+    };
     setLoading2(true);
     setIsLoading(true);
     setStatus("preparing");

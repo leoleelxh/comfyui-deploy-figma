@@ -94,10 +94,19 @@ export const createRun = withServerPromise(
             if (node.class_type == "ComfyUIDeployExternalText") {
               node.inputs["default_value"] = inputs[key];
             }
+            // 处理滑块参数
+            if (node.class_type == "ComfyUIDeployExternalNumberSlider") {
+              node.inputs["default_value"] = inputs[key]; // 确保滑块的值被正确赋值
+            }
           }
-
         });
       }
+    }
+
+    // 处理滑块参数
+    if (inputs && inputs.ComfyUIDeployExternalNumberSlider !== undefined) {
+      const sliderValue = inputs.ComfyUIDeployExternalNumberSlider; // 获取滑块的值
+      console.log("Slider value:", sliderValue); // 处理逻辑，例如存储或传递给其他函数
     }
 
     let prompt_id: string | undefined = undefined;
