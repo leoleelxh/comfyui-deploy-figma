@@ -554,3 +554,96 @@ SPACES_CDN_FORCE_PATH_STYLE="true"
 2. Images uploaded to storage (R2 or LocalStack)
 3. URLs constructed: `${CDN_ENDPOINT}/${BUCKET}/outputs/runs/${run_id}/${filename}`
 4. URLs stored in database with run outputs
+
+# comfyui到前端、api的参数传递
+
+好的，下面是将修复 `ComfyUIDeployExternalNumberSlider` 参数的过程记录写入 `README.md` 文档的内容。请查看以下内容并确认是否需要进一步修改。
+
+### 更新 `README.md`
+
+````markdown
+# ComfyUI Deploy Documentation
+
+## 参数定义和传递
+
+### ComfyUIDeployExternalNumberSlider
+
+- **类型**: float
+- **描述**: 滑块输入，允许用户选择一个数值。
+- **默认值**: 0
+- **范围**: 0 - 100
+
+#### 前端实现示例
+
+```jsx
+<input
+  type="range"
+  min="0"
+  max="100"
+  defaultValue="0"
+  onChange={(e) => setValues({ ...values, ComfyUIDeployExternalNumberSlider: e.target.value })}
+/>
+```
+
+#### API 处理示例
+
+在 `createRun` 函数中处理滑块参数：
+
+```typescript
+if (inputs && inputs.ComfyUIDeployExternalNumberSlider !== undefined) {
+  const sliderValue = inputs.ComfyUIDeployExternalNumberSlider; // 获取滑块的值
+  console.log("Slider value:", sliderValue); // 处理逻辑，例如存储或传递给其他函数
+}
+```
+
+## 修复过程记录
+
+### 1. 问题描述
+在项目中，`ComfyUIDeployExternalNumberSlider` 参数未能正确暴露，导致前端和 API 无法识别和处理该参数。我们需要确保该参数能够在前端和 API 中正确传递，并且能够包含其细节，如数值范围和默认值。
+
+### 2. 改动范围
+- **文件**: `web/src/components/customInputNodes.tsx`
+  - **修改**: 添加 `ComfyUIDeployExternalNumberSlider` 的定义，指定其类型和描述。
+  
+- **文件**: `web/src/server/createRun.ts`
+  - **修改**: 在 `createRun` 函数中处理 `ComfyUIDeployExternalNumberSlider` 参数，确保其值能够被正确获取和使用。
+
+- **文件**: `web/src/routes/registerCreateRunRoute.ts`
+  - **修改**: 确保在创建运行时，`inputs` 包含 `ComfyUIDeployExternalNumberSlider` 参数。
+
+- **文件**: `web/src/components/RunWorkflowInline.tsx`
+  - **修改**: 在提交表单时，确保滑块的值能够被正确传递。
+
+- **文件**: `web/src/app/(app)/api/update-run/route.ts`
+  - **修改**: 在更新运行状态时，确保能够处理 `ComfyUIDeployExternalNumberSlider` 参数。
+
+### 3. 代理链路
+- **前端**: 
+  - 用户在 UI 中通过滑块输入值。
+  - `RunWorkflowInline` 组件将滑块的值存储在 `values` 状态中，并在提交时将其传递给 `createRun` 函数。
+
+- **API**:
+  - `registerCreateRunRoute` 接收请求，提取 `inputs` 中的 `ComfyUIDeployExternalNumberSlider` 参数。
+  - `createRun` 函数处理该参数，并在需要时使用其值。
+
+### 4. 参数细节的传递
+为了将 `ComfyUIDeployExternalNumberSlider` 的细节（如数值范围和默认值）传递到前端或 API，我们可以采取以下步骤：
+
+- **在 `customInputNodes.tsx` 中定义参数细节**:
+  ```typescript
+  ComfyUIDeployExternalNumberSlider: "float - (slider input with min and max values, default: 0, range: 0-100)",
+  ```
+
+- **在前端 UI 中**:
+  - 在滑块组件中，使用 `min`、`max` 和 `defaultValue` 属性来定义滑块的行为。
+
+- **在 API 中**:
+  - 在处理请求时，确保能够接收和使用这些参数细节。
+
+### 5. 后续建议
+- **文档更新**: 在 `README.md` 中添加关于新参数的详细说明，包括其定义、使用示例和注意事项。
+- **参数扩展**: 为其他参数定义类似的细节，以便在前端和 API 中能够一致地处理。
+
+````
+
+
