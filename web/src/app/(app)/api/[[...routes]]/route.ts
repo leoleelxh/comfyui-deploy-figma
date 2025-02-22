@@ -47,22 +47,24 @@ async function checkAuth(c: Context, next: Next, headers?: HeadersInit) {
   await next();
 }
 
-app.use("/run", checkAuth);
-app.use("/upload-url", checkAuth);
-
 const corsHandler = cors({
-  origin: "*",
-  allowHeaders: ["Authorization", "Content-Type"],
-  allowMethods: ["POST", "GET", "OPTIONS"],
-  exposeHeaders: ["Content-Length"],
-  maxAge: 600,
+  origin: '*',
+  allowHeaders: ['*'],  
+  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],  
+  exposeHeaders: ['*'],  
+  maxAge: 86400, 
   credentials: true,
 });
 
-// CORS Check
-app.use("/workflow", corsHandler, checkAuth);
-app.use("/workflow-version/*", corsHandler, checkAuth);
-app.use("/deployments", corsHandler, checkAuth);
+app.use('*', corsHandler);  // 先处理 CORS
+
+// 然后再处理其他路由
+app.use("/run", checkAuth);
+app.use("/upload-url", checkAuth);
+app.use("/workflow", checkAuth);
+app.use("/workflow-version/*", checkAuth);
+app.use("/deployments", checkAuth);
+app.use("/status/*", checkAuth);
 
 // create run endpoint
 registerCreateRunRoute(app);
@@ -101,7 +103,6 @@ app.openAPIRegistry.registerComponent("securitySchemes", "bearerAuth", {
 });
 
 // Add status route
-app.use("/status/*", corsHandler, checkAuth);
 registerGetStatusRoute(app);
 
 // 添加调试日志
