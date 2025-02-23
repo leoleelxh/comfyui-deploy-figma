@@ -56,9 +56,10 @@ const corsHandler = cors({
   credentials: true,
 });
 
-app.use('*', corsHandler);  // 先处理 CORS
+// 确保 CORS 中间件在所有路由之前
+app.use('*', corsHandler);
 
-// 然后再处理其他路由
+// 认证检查
 app.use("/run", checkAuth);
 app.use("/upload-url", checkAuth);
 app.use("/workflow", checkAuth);
