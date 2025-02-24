@@ -1,6 +1,11 @@
 这是 fork 出来的，原项目是https://github.com/BennyKok/comfyui-deploy
 会汉化！
 
+# 注意事项：
+
+1. 工作流发布务必删除所有预览节点，不然会报错
+2. 默认值尽量不要加载过多的base64格式图像，不然会很慢
+
 localhost 方法不成功！
 
 # ComfyUI Deploy
