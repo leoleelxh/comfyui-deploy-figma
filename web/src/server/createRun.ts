@@ -109,7 +109,8 @@ export const createRun = withServerPromise(
             }
             // 处理 Boolean 参数
             if (node.class_type == "ComfyUIDeployExternalBoolean") {
-              node.inputs["default_value"] = inputs[key];
+              const boolValue = String(inputs[key]).toLowerCase() === "true";
+              node.inputs["default_value"] = boolValue;
             }
           }
         });
