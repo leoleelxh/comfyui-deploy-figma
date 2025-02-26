@@ -90,13 +90,26 @@ export const createRun = withServerPromise(
         Object.entries(workflow_api).forEach(([_, node]) => {
           if (node.inputs["input_id"] === key) {
             node.inputs["input_id"] = inputs[key];
+            
             // Fix for external text default value
             if (node.class_type == "ComfyUIDeployExternalText") {
               node.inputs["default_value"] = inputs[key];
             }
             // 处理滑块参数
             if (node.class_type == "ComfyUIDeployExternalNumberSlider") {
-              node.inputs["default_value"] = inputs[key]; // 确保滑块的值被正确赋值
+              node.inputs["default_value"] = inputs[key];
+            }
+            // 处理 Lora 参数
+            if (node.class_type == "ComfyUIDeployExternalLora") {
+              node.inputs["default_value"] = inputs[key];
+            }
+            // 处理 Checkpoint 参数
+            if (node.class_type == "ComfyUIDeployExternalCheckpoint") {
+              node.inputs["default_value"] = inputs[key];
+            }
+            // 处理 Boolean 参数
+            if (node.class_type == "ComfyUIDeployExternalBoolean") {
+              node.inputs["default_value"] = inputs[key];
             }
           }
         });

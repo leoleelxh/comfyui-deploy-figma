@@ -8,4 +8,5 @@ export const customInputNodes: Record<string, string> = {
   ComfyUIDeployExternalLora: "string - (public lora download url)",
   ComfyUIDeployExternalCheckpoint: "string - (public checkpoints download url)",
   ComfyUIDeployExternalFaceModel: "string - (public face model download url)",
+  ComfyUIDeployExternalBoolean: "boolean - (switch input for true/false values)",
 };
