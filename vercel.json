@@ -9,6 +9,15 @@
         { "key": "Access-Control-Allow-Headers", "value": "Authorization, Content-Type, X-Figma-Plugin-ID" },
         { "key": "Access-Control-Max-Age", "value": "86400" }
       ]
+    },
+    {
+      "source": "/api/status/(.*)",
+      "headers": [
+        { "key": "Access-Control-Allow-Credentials", "value": "true" },
+        { "key": "Access-Control-Allow-Origin", "value": "null" },
+        { "key": "Access-Control-Allow-Methods", "value": "GET,OPTIONS" },
+        { "key": "Access-Control-Allow-Headers", "value": "Authorization, Content-Type, X-Figma-Plugin-ID" }
+      ]
     }
   ],
   "env": {
