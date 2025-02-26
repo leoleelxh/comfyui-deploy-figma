@@ -36,11 +36,11 @@ export function NavbarMenu({
     {
       name: "API Keys",
       path: "/api-keys",
-    },
-    {
-      name: "Examples",
-      path: "/examples"
     }
+    // {
+    //   name: "Examples",
+    //   path: "/examples"
+    // }
   ];
 
   return (

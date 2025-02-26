@@ -63,9 +63,9 @@ export default async function Main() {
           <div className="flex flex-col justify-center gap-2">
             <Section.Announcement
               className="text-sm"
-              href="https://github.com/BennyKok/comfyui-deploy"
+              href="https://figma.comfyui.asia"
             >
-              ✨ Open Source on Github
+              ✨ Explore Figma plugins that use this service
             </Section.Announcement>
 
             <Section.Title className="text-left">
@@ -102,7 +102,7 @@ export default async function Main() {
       <footer className="text-base-content mx-auto flex flex-col md:flex-row items-center justify-center w-full max-w-5xl  gap-4 p-10 ">
         {/* <div className="md:col-span-4"> */}
         <div className="font-bold">{meta.name}</div>
-        <div>© {meta.author} 2023 . All rights reserved.</div>
+        <div>© {meta.author} 2025 . All rights reserved.</div>
         {/* </div> */}
       </footer>
     </div>

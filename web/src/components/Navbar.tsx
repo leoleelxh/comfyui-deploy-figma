@@ -94,10 +94,10 @@ export function Navbar() {
           variant="link"
           className="rounded-full aspect-square p-2 mr-4"
         >
-          <a href="/docs">Docs</a>
+          <a target="_blank" href="https://glittery-opinion-eb2.notion.site/ComfyUI-Image-Generator-Enhanced-1a64d23e7c2180c7a97df17214cf722f">Docs</a>
         </Button>
         <UserButton />
-        <Button
+        {/* <Button
           asChild
           variant="outline"
           className="rounded-full aspect-square p-2"
@@ -105,7 +105,7 @@ export function Navbar() {
           <a target="_blank" href="https://github.com/BennyKok/comfyui-deploy" rel="noreferrer">
             <Github />
           </a>
-        </Button>
+        </Button> */}
       </div>
     </>
   );

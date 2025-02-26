@@ -343,7 +343,7 @@ export function MachineList({
           className="max-w-sm"
         />
         <div className="ml-auto flex gap-2">
-          <InsertModal
+          {/* <InsertModal
             dialogClassName="sm:max-w-[600px]"
             disabled={
               data.some(
@@ -359,37 +359,8 @@ export function MachineList({
             description="Add custom ComfyUI machines to your account."
             serverAction={addCustomMachine}
             formSchema={addCustomMachineSchema}
-            fieldConfig={{
-              type: {
-                fieldType: "fallback",
-                inputProps: {
-                  disabled: true,
-                  showLabel: false,
-                  type: "hidden",
-                },
-              },
-              snapshot: {
-                fieldType: "snapshot",
-                inputProps: {
-                  showLabel: false,
-                },
-              },
-              models: {
-                fieldType: "models",
-                inputProps: {
-                  showLabel: false,
-                },
-              },
-              gpu: {
-                fieldType: !userMetadata.betaFeaturesAccess
-                  ? "fallback"
-                  : "select",
-                inputProps: {
-                  disabled: !userMetadata.betaFeaturesAccess,
-                },
-              },
-            }}
-          />
+            fieldConfig={{...}}
+          /> */}
           <InsertModal
             title="Custom Machine"
             description="Add custom comfyui machines to your account."
