@@ -10,6 +10,84 @@ localhost 方法不成功！
 
 # ComfyUI Deploy
 
+A deployment solution for ComfyUI workflows.
+
+## Components
+
+### Input Components
+
+| Component Name | Type | Input Parameters | Description | Example Value |
+|---------------|------|------------------|-------------|---------------|
+| ComfyUIDeployExternalText | string | input_id<br>display_name<br>description<br>default_value | Text input field | "hello world" |
+| ComfyUIDeployExternalImage | string | input_id<br>display_name<br>description<br>default_value | Image URL input | "https://example.com/image.jpg" |
+| ComfyUIDeployExternalImageAlpha | string | input_id<br>display_name<br>description<br>default_value | Alpha channel image URL | "https://example.com/alpha.png" |
+| ComfyUIDeployExternalNumber | float | input_id<br>display_name<br>description<br>default_value | Float number input | 0.5 |
+| ComfyUIDeployExternalNumberInt | integer | input_id<br>display_name<br>description<br>default_value | Integer input | 42 |
+| ComfyUIDeployExternalNumberSlider | float | input_id<br>display_name<br>description<br>default_value<br>min<br>max | Slider input | 0.7 |
+| ComfyUIDeployExternalLora | string | input_id<br>display_name<br>description<br>default_value | Lora model URL | "https://example.com/lora.safetensors" |
+| ComfyUIDeployExternalCheckpoint | string | input_id<br>display_name<br>description<br>default_value | Checkpoint model URL | "https://example.com/model.safetensors" |
+| ComfyUIDeployExternalBoolean | boolean | input_id<br>display_name<br>description<br>default_value | Boolean switch | true/false |
+
+### How to Add New Components
+
+1. Register component type in `web/src/components/customInputNodes.tsx`:
+```typescript
+export const customInputNodes: Record<string, string> = {
+  ComfyUIDeployExternalNewType: "type description",
+};
+```
+
+2. Add processing logic in `web/src/server/createRun.ts`:
+```typescript
+if (node.class_type == "ComfyUIDeployExternalNewType") {
+  node.inputs["default_value"] = inputs[key];
+}
+```
+
+3. Create Python node in `comfy-nodes/`:
+```python
+class ComfyUIDeployExternalNewType:
+    def __init__(self):
+        self.input_id = "input_id"
+        self.display_name = "Display Name"
+        self.description = "Description"
+        self.default_value = "default"
+```
+
+### Component Development Guidelines
+
+1. **Naming Convention**
+- Must start with `ComfyUIDeploy`
+- Use `External` for external inputs
+- Use specific type as suffix
+
+2. **Required Parameters**
+- `input_id`: Unique identifier
+- `display_name`: Display name
+- `description`: Component description
+- `default_value`: Default value
+
+3. **Type Handling**
+- String types: Direct pass
+- Number types: Need conversion
+- Boolean: Need standardization
+```typescript
+const boolValue = String(inputs[key]).toLowerCase() === "true";
+```
+
+4. **Error Handling**
+- Validate input values
+- Handle type conversions safely
+- Provide meaningful error messages
+
+## Important Notes
+
+1. All components must be registered in `customInputNodes.tsx`
+2. Ensure unique component names
+3. Handle input value type conversions correctly
+4. Add proper error handling
+5. Update documentation and changelog
+
 Open source comfyui deployment platform, a `vercel` for generative workflow infra. (serverless hosted gpu with vertical intergation with comfyui)
 
 > [!NOTE]  
@@ -566,7 +644,7 @@ SPACES_CDN_FORCE_PATH_STYLE="true"
 
 ### 更新 `README.md`
 
-````markdown
+```markdown
 # ComfyUI Deploy Documentation
 
 ## 参数定义和传递
@@ -648,7 +726,3 @@ if (inputs && inputs.ComfyUIDeployExternalNumberSlider !== undefined) {
 ### 5. 后续建议
 - **文档更新**: 在 `README.md` 中添加关于新参数的详细说明，包括其定义、使用示例和注意事项。
 - **参数扩展**: 为其他参数定义类似的细节，以便在前端和 API 中能够一致地处理。
-
-````
-
-

@@ -18,6 +18,9 @@
 - Added detailed API documentation
 - Added local development setup guide
 - Added comprehensive error handling for storage operations
+- New ComfyUIDeployExternalBoolean component
+- Support for boolean input values
+- Improved component documentation
 
 ## Setup Guide
 
@@ -52,3 +55,21 @@ aws --endpoint-url=http://172.26.61.86:4566 s3 mb s3://comfyui-deploy
 # Set bucket public access
 aws --endpoint-url=http://172.26.61.86:4566 s3api put-bucket-acl --bucket comfyui-deploy --acl public-read
 ``` 
+
+## [1.0.0] - 2024-03-XX
+
+### Added
+- ComfyUIDeployExternalLora component
+- ComfyUIDeployExternalCheckpoint component
+- Support for model file URL inputs
+- Basic component framework
+- Initial documentation
+
+### Changed
+- Standardized component naming convention
+- Improved error handling
+- Enhanced type safety
+
+### Fixed
+- Input value type conversion issues
+- Component registration process 
