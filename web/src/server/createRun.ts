@@ -90,23 +90,24 @@ export const createRun = withServerPromise(
 
     // Replace the inputs
     if (inputs && workflow_api) {
+      // 1. 先处理所有图片上传
+      const uploadPromises = [];
+      
       for (const key in inputs) {
         Object.entries(workflow_api).forEach(([_, node]) => {
           if (node.inputs["input_id"] === key) {
-            // 添加日志
             console.log("Found matching node:", node.class_type, "for key:", key);
             
-            // 对于图片输入的特殊处理
             if (node.class_type === "ComfyUIDeployExternalImage") {
               const value = inputs[key];
-              // 确保值是字符串并且是 base64 图片
               if (typeof value === 'string' && value.startsWith('data:image')) {
-                console.log("Processing image input for key:", key);
-                // 将 base64 转换为 URL
-                uploadBase64Image(value).then(url => {
-                  console.log("Uploaded image URL:", url);
-                  node.inputs["default_value"] = url;
-                });
+                // 收集所有上传 Promise
+                uploadPromises.push(
+                  uploadBase64Image(value).then(url => {
+                    console.log("Uploaded image URL:", url);
+                    node.inputs["default_value"] = url;
+                  })
+                );
               }
             }
 
@@ -136,6 +137,10 @@ export const createRun = withServerPromise(
           }
         });
       }
+
+      // 2. 等待所有图片上传完成
+      await Promise.all(uploadPromises);
+      console.log("All images uploaded, workflow_api:", workflow_api);
     }
 
     // 添加日志来查看最终的 workflow_api
@@ -156,7 +161,7 @@ export const createRun = withServerPromise(
 
     prompt_id = v4();
 
-    // 1. 创建任务记录
+    // 3. 创建任务记录
     const workflow_run = await db
       .insert(workflowRunsTable)
       .values({
@@ -170,39 +175,12 @@ export const createRun = withServerPromise(
       })
       .returning();
 
-    // 2. 立即返回任务 ID
-    const response = {
-      workflow_run_id: workflow_run[0].id,
-      message: "Workflow run created",
-    };
-
-    // 3. 异步处理机器请求
+    // 4. 异步处理机器请求
     (async () => {
       try {
-        // 添加日志
-        console.log("Starting machine request with workflow_api:", workflow_api);
-
-        if (inputs && workflow_api) {
-          // 处理所有图片上传
-          const uploadPromises = Object.entries(workflow_api).map(async ([_, node]) => {
-            if (node.class_type === "ComfyUIDeployExternalImage") {
-              const value = node.inputs["default_value"];
-              // 确保值是字符串并且是 base64 图片
-              if (typeof value === 'string' && value.startsWith('data:image')) {
-                console.log("Uploading image for node:", node);
-                node.inputs["default_value"] = await uploadBase64Image(value);
-                console.log("Uploaded image URL:", node.inputs["default_value"]);
-              }
-            }
-          });
-
-          // 等待所有图片上传完成
-          await Promise.all(uploadPromises);
-        }
-
-        // 添加日志
+        // 直接发送到 ComfyUI，因为图片已经上传完成
         console.log("Sending to ComfyUI with workflow_api:", workflow_api);
-
+        
         switch (machine.type) {
           case "comfy-deploy-serverless":
           case "modal-serverless":
@@ -311,6 +289,12 @@ export const createRun = withServerPromise(
           .where(eq(workflowRunsTable.id, workflow_run[0].id));
       }
     })().catch(console.error);
+
+    // 2. 立即返回任务 ID
+    const response = {
+      workflow_run_id: workflow_run[0].id,
+      message: "Workflow run created",
+    };
 
     return response;
   },
