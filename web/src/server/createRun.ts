@@ -16,6 +16,7 @@ import { revalidatePath } from "next/cache";
 import "server-only";
 import { v4 } from "uuid";
 import { withServerPromise } from "./withServerPromise";
+import { uploadBase64Image } from "./uploadBase64Image";
 
 export const createRun = withServerPromise(
   async ({
@@ -155,6 +156,14 @@ export const createRun = withServerPromise(
     // 3. 异步处理机器请求
     (async () => {
       try {
+        // 处理工作流中的所有图片输入
+        for (const [key, value] of Object.entries(inputs)) {
+          if (typeof value === 'string' && value.startsWith('data:image')) {
+            // 将 base64 图片转换为 CDN URL
+            inputs[key] = await uploadBase64Image(value);
+          }
+        }
+
         switch (machine.type) {
           case "comfy-deploy-serverless":
           case "modal-serverless":

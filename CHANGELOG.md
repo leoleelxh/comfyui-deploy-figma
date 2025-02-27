@@ -25,9 +25,15 @@
 ### Changed
 
 - Updated API response handling:
+
   - Added status polling endpoint
   - Improved error handling
   - Enhanced progress tracking
+
+- Improved image handling:
+  - Automatically convert base64 images to CDN URLs
+  - Upload images to R2 storage before processing
+  - Use CDN URLs for ComfyUI input
 
 ### Added
 
