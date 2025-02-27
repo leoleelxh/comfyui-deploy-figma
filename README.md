@@ -1,7 +1,94 @@
+# ComfyUI Deploy
+
 这是 fork 出来的，原项目是https://github.com/BennyKok/comfyui-deploy
 会汉化！
 
-# 注意事项：
+# 重要更新记录
+
+## 1. CORS 问题修复
+
+### 问题描述
+
+在使用 Figma 插件时，出现跨域请求被阻止的问题。
+
+### 解决方案
+
+1. 更新 `vercel.json` 配置：
+
+```json
+{
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        { "key": "Access-Control-Allow-Origin", "value": "*" },
+        { "key": "Access-Control-Allow-Methods", "value": "GET, POST, OPTIONS" }
+      ]
+    }
+  ]
+}
+```
+
+2. 在 API 路由中添加 CORS 中间件：
+
+```typescript
+app.use("*", corsHandler);
+```
+
+## 2. Vercel 60s 超时问题
+
+### 问题描述
+
+Vercel 函数有 60 秒的超时限制，导致长时间运行的任务失败。
+
+### 解决方案
+
+实现异步任务处理机制：
+
+1. 立即返回任务 ID
+2. 后台异步处理请求
+3. 客户端通过轮询获取结果
+
+### API 调用流程
+
+```mermaid
+sequenceDiagram
+    Client->>Server: POST /api/run
+    Note over Server: 创建任务记录
+    Server-->>Client: 返回 task_id
+    Note over Server: 异步处理任务
+    Client->>Server: GET /api/status/{task_id}
+    Server-->>Client: 返回任务状态
+    Note over Client: 根据状态决定是否继续轮询
+```
+
+## 3. 图片 URL 格式问题
+
+### 问题描述
+
+图片 URL 格式不一致，导致访问失败：
+
+```
+# 错误格式（包含 bucket）
+https://pub-xxx.r2.dev/comfyui-deploy/outputs/runs/{run_id}/image.png
+
+# 正确格式
+https://pub-xxx.r2.dev/outputs/runs/{run_id}/image.png
+```
+
+### 解决方案
+
+修改 `update-run/route.ts` 中的 URL 构建逻辑：
+
+```typescript
+// 修改前
+image.url = `${CDN_ENDPOINT}/${BUCKET}/outputs/runs/${run_id}/${image.filename}`;
+
+// 修改后
+image.url = `${CDN_ENDPOINT}/outputs/runs/${run_id}/${image.filename}`;
+```
+
+# 使用注意事项
 
 1. 工作流发布务必删除所有预览节点，不然会报错
 2. 默认值尽量不要加载过多的 base64 格式图像，不然会很慢
@@ -700,6 +787,8 @@ SPACES_CDN_FORCE_PATH_STYLE="true"
 ```
 ````
 
+````
+
 #### API 处理示例
 
 在 `createRun` 函数中处理滑块参数：
@@ -709,7 +798,7 @@ if (inputs && inputs.ComfyUIDeployExternalNumberSlider !== undefined) {
   const sliderValue = inputs.ComfyUIDeployExternalNumberSlider; // 获取滑块的值
   console.log("Slider value:", sliderValue); // 处理逻辑，例如存储或传递给其他函数
 }
-```
+````
 
 ## 修复过程记录
 
@@ -768,3 +857,64 @@ if (inputs && inputs.ComfyUIDeployExternalNumberSlider !== undefined) {
 
 - **文档更新**: 在 `README.md` 中添加关于新参数的详细说明，包括其定义、使用示例和注意事项。
 - **参数扩展**: 为其他参数定义类似的细节，以便在前端和 API 中能够一致地处理。
+
+```
+
+# 重要更新：修复图片 URL 问题
+
+## 问题描述
+在使用 API 时，图片 URL 的格式不一致，导致某些情况下图片无法正常访问：
+
+1. 有时 URL 包含 bucket 名称：
+```
+
+https://pub-xxx.r2.dev/comfyui-deploy/outputs/runs/{run_id}/image.png
+
+```
+
+2. 有时不包含 bucket 名称（正确格式）：
+```
+
+https://pub-xxx.r2.dev/outputs/runs/{run_id}/image.png
+
+````
+
+## 问题原因
+1. 在 `/api/update-run` 接口中，URL 构建逻辑错误地包含了 bucket 名称
+2. 环境变量 `SPACES_CDN_DONT_INCLUDE_BUCKET="false"` 的设置影响了 URL 的构建
+
+## 解决方案
+修改 `web/src/app/(app)/api/update-run/route.ts` 中的 URL 构建逻辑：
+```typescript
+// 修改前
+image.url = `${CDN_ENDPOINT}/${BUCKET}/outputs/runs/${run_id}/${image.filename}`;
+
+// 修改后
+image.url = `${CDN_ENDPOINT}/outputs/runs/${run_id}/${image.filename}`;
+```
+
+## 技术细节
+
+1. URL 构建发生在 ComfyUI 生成图片后调用 `/api/update-run` 时
+2. 构建的 URL 被保存在数据库中
+3. 前端和 API 直接使用数据库中存储的 URL
+4. 不需要修改其他组件，因为 URL 在源头就被正确构建
+
+## 验证方法
+
+1. 使用 API 生成新图片
+2. 检查返回的图片 URL 格式
+3. 验证图片是否可以正常访问
+
+## 注意事项
+
+1. 确保环境变量设置正确
+2. 新生成的图片 URL 将自动使用正确格式
+3. 历史数据中的 URL 可能需要单独处理
+
+## 相关文件
+
+- `web/src/app/(app)/api/update-run/route.ts`
+- `web/src/routes/registerGetStatusRoute.ts`
+- `web/src/server/createRun.ts`
+````
