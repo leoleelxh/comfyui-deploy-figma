@@ -38,10 +38,16 @@
 ### Added
 
 - Added status polling mechanism:
+
   - New `/api/status/{task_id}` endpoint
   - Task status tracking
   - Progress reporting
   - Error handling
+
+- 图片处理功能增强
+  - 支持 base64 图片自动转换为 R2 存储 URL
+  - 优化 ComfyUIDeployExternalImage 组件的图片处理流程
+  - 添加图片上传状态追踪和日志
 
 ## [1.0.1] - 2024-02-27
 
@@ -120,3 +126,13 @@ aws --endpoint-url=http://172.26.61.86:4566 s3api put-bucket-acl --bucket comfyu
 
 - Input value type conversion issues
 - Component registration process
+
+- 改进工作流处理逻辑
+
+  - 优化参数传递机制，确保与原有逻辑保持一致
+  - 调整异步处理顺序：先完成图片上传，再发送工作流
+  - 增强错误处理和日志记录
+
+- 修复图片参数传递问题
+  - 修正 input_id 参数的处理逻辑
+  - 确保图片 URL 正确传递到 ComfyUI 节点

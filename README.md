@@ -760,7 +760,7 @@ SPACES_CDN_FORCE_PATH_STYLE="true"
 
 ### 更新 `README.md`
 
-````markdown
+``````markdown
 # ComfyUI Deploy Documentation
 
 ## 参数定义和传递
@@ -785,10 +785,10 @@ SPACES_CDN_FORCE_PATH_STYLE="true"
   }
 />
 ```
-````
 
-````
+``````
 
+`````markdown
 #### API 处理示例
 
 在 `createRun` 函数中处理滑块参数：
@@ -798,7 +798,7 @@ if (inputs && inputs.ComfyUIDeployExternalNumberSlider !== undefined) {
   const sliderValue = inputs.ComfyUIDeployExternalNumberSlider; // 获取滑块的值
   console.log("Slider value:", sliderValue); // 处理逻辑，例如存储或传递给其他函数
 }
-````
+``````
 
 ## 修复过程记录
 
@@ -917,4 +917,73 @@ image.url = `${CDN_ENDPOINT}/outputs/runs/${run_id}/${image.filename}`;
 - `web/src/app/(app)/api/update-run/route.ts`
 - `web/src/routes/registerGetStatusRoute.ts`
 - `web/src/server/createRun.ts`
+```
+
+# 图片处理功能说明
+
+## 工作流程
+
+1. 图片上传流程
+   - 接收前端传入的 base64 格式图片
+   - 自动转换并上传到 R2 存储
+   - 生成可访问的 CDN URL
+   - 更新工作流中的图片节点参数
+
+2. 参数传递机制
+   ```typescript
+   // 示例：图片节点处理
+   if (node.class_type === "ComfyUIDeployExternalImage") {
+     const value = inputs[key];
+     if (typeof value === 'string' && value.startsWith('data:image')) {
+       // 上传到 R2 并更新节点参数
+       node.inputs["input_id"] = url;
+     }
+   }
+   ```
+
+3. 执行顺序
+   - 先处理所有图片上传
+   - 等待上传完成
+   - 更新工作流参数
+   - 发送到 ComfyUI 执行
+
+## 注意事项
+
+1. 图片处理
+   - 支持 base64 格式的图片输入
+   - 自动处理图片上传和转换
+   - 确保上传完成后再执行工作流
+
+2. 参数设置
+   - 图片节点使用 input_id 参数传递 URL
+   - 保持与原有参数传递逻辑一致
+   - 支持动态的 input_id 命名
+
+3. 环境配置
+   需要配置以下环境变量：
+   ```env
+   SPACES_ENDPOINT=your_r2_endpoint
+   SPACES_ENDPOINT_CDN=your_cdn_endpoint
+   SPACES_BUCKET=your_bucket_name
+   SPACES_KEY=your_access_key
+   SPACES_SECRET=your_secret_key
+   ```
+
+## 技术实现
+
+1. 图片上传
+   - 使用 S3 兼容的 API 上传到 R2
+   - 生成唯一文件名避免冲突
+   - 设置正确的 Content-Type 和 ACL
+
+2. 异步处理
+   - 使用 Promise.all 等待所有上传完成
+   - 确保按正确顺序执行操作
+   - 完整的错误处理和状态更新
+
+3. 日志追踪
+   - 记录上传过程和状态
+   - 跟踪参数传递
+   - 便于调试和监控
 ````
+``````
