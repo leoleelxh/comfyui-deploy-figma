@@ -157,10 +157,12 @@ export const createRun = withServerPromise(
     (async () => {
       try {
         // 处理工作流中的所有图片输入
-        for (const [key, value] of Object.entries(inputs)) {
-          if (typeof value === 'string' && value.startsWith('data:image')) {
-            // 将 base64 图片转换为 CDN URL
-            inputs[key] = await uploadBase64Image(value);
+        if (inputs) {
+          for (const [key, value] of Object.entries(inputs)) {
+            if (typeof value === 'string' && value.startsWith('data:image')) {
+              // 将 base64 图片转换为 CDN URL
+              inputs[key] = await uploadBase64Image(value);
+            }
           }
         }
 
