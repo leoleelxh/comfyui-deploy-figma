@@ -4,7 +4,28 @@
 # 注意事项：
 
 1. 工作流发布务必删除所有预览节点，不然会报错
-2. 默认值尽量不要加载过多的base64格式图像，不然会很慢
+2. 默认值尽量不要加载过多的 base64 格式图像，不然会很慢
+3. API 请求处理流程：
+   - `/api/run` 接口会立即返回 task_id
+   - 使用 `/api/status/{task_id}` 轮询任务状态
+   - 任务状态包括：not-started, running, uploading, success, failed
+4. 超时处理：
+   - Vercel 函数有 60s 超时限制
+   - 任务创建后会立即返回，避免超时
+   - 使用状态轮询机制获取最终结果
+
+# API 调用流程
+
+```mermaid
+sequenceDiagram
+    Client->>Server: POST /api/run
+    Note over Server: 创建任务记录
+    Server-->>Client: 返回 task_id
+    Note over Server: 异步处理任务
+    Client->>Server: GET /api/status/{task_id}
+    Server-->>Client: 返回任务状态
+    Note over Client: 根据状态决定是否继续轮询
+```
 
 localhost 方法不成功！
 
@@ -16,21 +37,22 @@ A deployment solution for ComfyUI workflows.
 
 ### Input Components
 
-| Component Name | Type | Input Parameters | Description | Example Value |
-|---------------|------|------------------|-------------|---------------|
-| ComfyUIDeployExternalText | string | input_id<br>display_name<br>description<br>default_value | Text input field | "hello world" |
-| ComfyUIDeployExternalImage | string | input_id<br>display_name<br>description<br>default_value | Image URL input | "https://example.com/image.jpg" |
-| ComfyUIDeployExternalImageAlpha | string | input_id<br>display_name<br>description<br>default_value | Alpha channel image URL | "https://example.com/alpha.png" |
-| ComfyUIDeployExternalNumber | float | input_id<br>display_name<br>description<br>default_value | Float number input | 0.5 |
-| ComfyUIDeployExternalNumberInt | integer | input_id<br>display_name<br>description<br>default_value | Integer input | 42 |
-| ComfyUIDeployExternalNumberSlider | float | input_id<br>display_name<br>description<br>default_value<br>min<br>max | Slider input | 0.7 |
-| ComfyUIDeployExternalLora | string | input_id<br>display_name<br>description<br>default_value | Lora model URL | "https://example.com/lora.safetensors" |
-| ComfyUIDeployExternalCheckpoint | string | input_id<br>display_name<br>description<br>default_value | Checkpoint model URL | "https://example.com/model.safetensors" |
-| ComfyUIDeployExternalBoolean | boolean | input_id<br>display_name<br>description<br>default_value | Boolean switch | true/false |
+| Component Name                    | Type    | Input Parameters                                                       | Description             | Example Value                           |
+| --------------------------------- | ------- | ---------------------------------------------------------------------- | ----------------------- | --------------------------------------- |
+| ComfyUIDeployExternalText         | string  | input_id<br>display_name<br>description<br>default_value               | Text input field        | "hello world"                           |
+| ComfyUIDeployExternalImage        | string  | input_id<br>display_name<br>description<br>default_value               | Image URL input         | "https://example.com/image.jpg"         |
+| ComfyUIDeployExternalImageAlpha   | string  | input_id<br>display_name<br>description<br>default_value               | Alpha channel image URL | "https://example.com/alpha.png"         |
+| ComfyUIDeployExternalNumber       | float   | input_id<br>display_name<br>description<br>default_value               | Float number input      | 0.5                                     |
+| ComfyUIDeployExternalNumberInt    | integer | input_id<br>display_name<br>description<br>default_value               | Integer input           | 42                                      |
+| ComfyUIDeployExternalNumberSlider | float   | input_id<br>display_name<br>description<br>default_value<br>min<br>max | Slider input            | 0.7                                     |
+| ComfyUIDeployExternalLora         | string  | input_id<br>display_name<br>description<br>default_value               | Lora model URL          | "https://example.com/lora.safetensors"  |
+| ComfyUIDeployExternalCheckpoint   | string  | input_id<br>display_name<br>description<br>default_value               | Checkpoint model URL    | "https://example.com/model.safetensors" |
+| ComfyUIDeployExternalBoolean      | boolean | input_id<br>display_name<br>description<br>default_value               | Boolean switch          | true/false                              |
 
 ### How to Add New Components
 
 1. Register component type in `web/src/components/customInputNodes.tsx`:
+
 ```typescript
 export const customInputNodes: Record<string, string> = {
   ComfyUIDeployExternalNewType: "type description",
@@ -38,6 +60,7 @@ export const customInputNodes: Record<string, string> = {
 ```
 
 2. Add processing logic in `web/src/server/createRun.ts`:
+
 ```typescript
 if (node.class_type == "ComfyUIDeployExternalNewType") {
   node.inputs["default_value"] = inputs[key];
@@ -45,6 +68,7 @@ if (node.class_type == "ComfyUIDeployExternalNewType") {
 ```
 
 3. Create Python node in `comfy-nodes/`:
+
 ```python
 class ComfyUIDeployExternalNewType:
     def __init__(self):
@@ -57,25 +81,30 @@ class ComfyUIDeployExternalNewType:
 ### Component Development Guidelines
 
 1. **Naming Convention**
+
 - Must start with `ComfyUIDeploy`
 - Use `External` for external inputs
 - Use specific type as suffix
 
 2. **Required Parameters**
+
 - `input_id`: Unique identifier
 - `display_name`: Display name
 - `description`: Component description
 - `default_value`: Default value
 
 3. **Type Handling**
+
 - String types: Direct pass
 - Number types: Need conversion
 - Boolean: Need standardization
+
 ```typescript
 const boolValue = String(inputs[key]).toLowerCase() === "true";
 ```
 
 4. **Error Handling**
+
 - Validate input values
 - Handle type conversions safely
 - Provide meaningful error messages
@@ -638,13 +667,13 @@ SPACES_CDN_FORCE_PATH_STYLE="true"
 3. URLs constructed: `${CDN_ENDPOINT}/${BUCKET}/outputs/runs/${run_id}/${filename}`
 4. URLs stored in database with run outputs
 
-# comfyui到前端、api的参数传递
+# comfyui 到前端、api 的参数传递
 
 好的，下面是将修复 `ComfyUIDeployExternalNumberSlider` 参数的过程记录写入 `README.md` 文档的内容。请查看以下内容并确认是否需要进一步修改。
 
 ### 更新 `README.md`
 
-```markdown
+````markdown
 # ComfyUI Deploy Documentation
 
 ## 参数定义和传递
@@ -664,9 +693,12 @@ SPACES_CDN_FORCE_PATH_STYLE="true"
   min="0"
   max="100"
   defaultValue="0"
-  onChange={(e) => setValues({ ...values, ComfyUIDeployExternalNumberSlider: e.target.value })}
+  onChange={(e) =>
+    setValues({ ...values, ComfyUIDeployExternalNumberSlider: e.target.value })
+  }
 />
 ```
+````
 
 #### API 处理示例
 
@@ -682,26 +714,32 @@ if (inputs && inputs.ComfyUIDeployExternalNumberSlider !== undefined) {
 ## 修复过程记录
 
 ### 1. 问题描述
+
 在项目中，`ComfyUIDeployExternalNumberSlider` 参数未能正确暴露，导致前端和 API 无法识别和处理该参数。我们需要确保该参数能够在前端和 API 中正确传递，并且能够包含其细节，如数值范围和默认值。
 
 ### 2. 改动范围
+
 - **文件**: `web/src/components/customInputNodes.tsx`
   - **修改**: 添加 `ComfyUIDeployExternalNumberSlider` 的定义，指定其类型和描述。
-  
 - **文件**: `web/src/server/createRun.ts`
+
   - **修改**: 在 `createRun` 函数中处理 `ComfyUIDeployExternalNumberSlider` 参数，确保其值能够被正确获取和使用。
 
 - **文件**: `web/src/routes/registerCreateRunRoute.ts`
+
   - **修改**: 确保在创建运行时，`inputs` 包含 `ComfyUIDeployExternalNumberSlider` 参数。
 
 - **文件**: `web/src/components/RunWorkflowInline.tsx`
+
   - **修改**: 在提交表单时，确保滑块的值能够被正确传递。
 
 - **文件**: `web/src/app/(app)/api/update-run/route.ts`
   - **修改**: 在更新运行状态时，确保能够处理 `ComfyUIDeployExternalNumberSlider` 参数。
 
 ### 3. 代理链路
-- **前端**: 
+
+- **前端**:
+
   - 用户在 UI 中通过滑块输入值。
   - `RunWorkflowInline` 组件将滑块的值存储在 `values` 状态中，并在提交时将其传递给 `createRun` 函数。
 
@@ -710,19 +748,23 @@ if (inputs && inputs.ComfyUIDeployExternalNumberSlider !== undefined) {
   - `createRun` 函数处理该参数，并在需要时使用其值。
 
 ### 4. 参数细节的传递
+
 为了将 `ComfyUIDeployExternalNumberSlider` 的细节（如数值范围和默认值）传递到前端或 API，我们可以采取以下步骤：
 
 - **在 `customInputNodes.tsx` 中定义参数细节**:
+
   ```typescript
   ComfyUIDeployExternalNumberSlider: "float - (slider input with min and max values, default: 0, range: 0-100)",
   ```
 
 - **在前端 UI 中**:
+
   - 在滑块组件中，使用 `min`、`max` 和 `defaultValue` 属性来定义滑块的行为。
 
 - **在 API 中**:
   - 在处理请求时，确保能够接收和使用这些参数细节。
 
 ### 5. 后续建议
+
 - **文档更新**: 在 `README.md` 中添加关于新参数的详细说明，包括其定义、使用示例和注意事项。
 - **参数扩展**: 为其他参数定义类似的细节，以便在前端和 API 中能够一致地处理。
