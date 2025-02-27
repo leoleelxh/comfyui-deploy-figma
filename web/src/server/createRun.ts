@@ -97,15 +97,17 @@ export const createRun = withServerPromise(
             console.log("Found matching node:", node.class_type, "for key:", key);
             
             // 对于图片输入的特殊处理
-            if (node.class_type === "ComfyUIDeployExternalImage" && 
-                typeof inputs[key] === 'string' && 
-                inputs[key].startsWith('data:image')) {
-              console.log("Processing image input for key:", key);
-              // 将 base64 转换为 URL
-              uploadBase64Image(inputs[key]).then(url => {
-                console.log("Uploaded image URL:", url);
-                node.inputs["default_value"] = url;
-              });
+            if (node.class_type === "ComfyUIDeployExternalImage") {
+              const value = inputs[key];
+              // 确保值是字符串并且是 base64 图片
+              if (typeof value === 'string' && value.startsWith('data:image')) {
+                console.log("Processing image input for key:", key);
+                // 将 base64 转换为 URL
+                uploadBase64Image(value).then(url => {
+                  console.log("Uploaded image URL:", url);
+                  node.inputs["default_value"] = url;
+                });
+              }
             }
 
             node.inputs["input_id"] = inputs[key];
@@ -183,12 +185,14 @@ export const createRun = withServerPromise(
         if (inputs && workflow_api) {
           // 处理所有图片上传
           const uploadPromises = Object.entries(workflow_api).map(async ([_, node]) => {
-            if (node.class_type === "ComfyUIDeployExternalImage" && 
-                typeof node.inputs["default_value"] === 'string' && 
-                node.inputs["default_value"].startsWith('data:image')) {
-              console.log("Uploading image for node:", node);
-              node.inputs["default_value"] = await uploadBase64Image(node.inputs["default_value"]);
-              console.log("Uploaded image URL:", node.inputs["default_value"]);
+            if (node.class_type === "ComfyUIDeployExternalImage") {
+              const value = node.inputs["default_value"];
+              // 确保值是字符串并且是 base64 图片
+              if (typeof value === 'string' && value.startsWith('data:image')) {
+                console.log("Uploading image for node:", node);
+                node.inputs["default_value"] = await uploadBase64Image(value);
+                console.log("Uploaded image URL:", node.inputs["default_value"]);
+              }
             }
           });
 
