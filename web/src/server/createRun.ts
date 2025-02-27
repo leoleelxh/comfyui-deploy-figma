@@ -96,43 +96,44 @@ export const createRun = withServerPromise(
       for (const key in inputs) {
         Object.entries(workflow_api).forEach(([_, node]) => {
           if (node.inputs["input_id"] === key) {
-            console.log("Found matching node:", node.class_type, "for key:", key);
-            
             if (node.class_type === "ComfyUIDeployExternalImage") {
               const value = inputs[key];
               if (typeof value === 'string' && value.startsWith('data:image')) {
-                // 收集所有上传 Promise
                 uploadPromises.push(
                   uploadBase64Image(value).then(url => {
                     console.log("Uploaded image URL:", url);
-                    node.inputs["default_value"] = url;
+                    // 只设置 input_id，保持和原代码一致的逻辑
+                    node.inputs["input_id"] = url;
                   })
                 );
               }
-            }
+            } else {
+              // 其他类型节点保持原有逻辑
+              node.inputs["input_id"] = inputs[key];
+              
+              if (node.class_type == "ComfyUIDeployExternalText") {
+                node.inputs["default_value"] = inputs[key];
+              }
+              // 处理滑块参数
+              if (node.class_type == "ComfyUIDeployExternalNumberSlider") {
+                node.inputs["default_value"] = inputs[key];
+              }
+              // 处理 Lora 参数
+              if (node.class_type == "ComfyUIDeployExternalLora") {
+                node.inputs["default_value"] = inputs[key];
+              }
+              // 处理 Checkpoint 参数
+              if (node.class_type == "ComfyUIDeployExternalCheckpoint") {
+                node.inputs["default_value"] = inputs[key];
+              }
+              // 处理 Boolean 参数
+              if (node.class_type == "ComfyUIDeployExternalBoolean") {
+                const boolValue = String(inputs[key]).toLowerCase() === "true";
+                node.inputs["default_value"] = boolValue;
+              }
 
-            node.inputs["input_id"] = inputs[key];
-            
-            // Fix for external text default value
-            if (node.class_type == "ComfyUIDeployExternalText") {
-              node.inputs["default_value"] = inputs[key];
-            }
-            // 处理滑块参数
-            if (node.class_type == "ComfyUIDeployExternalNumberSlider") {
-              node.inputs["default_value"] = inputs[key];
-            }
-            // 处理 Lora 参数
-            if (node.class_type == "ComfyUIDeployExternalLora") {
-              node.inputs["default_value"] = inputs[key];
-            }
-            // 处理 Checkpoint 参数
-            if (node.class_type == "ComfyUIDeployExternalCheckpoint") {
-              node.inputs["default_value"] = inputs[key];
-            }
-            // 处理 Boolean 参数
-            if (node.class_type == "ComfyUIDeployExternalBoolean") {
-              const boolValue = String(inputs[key]).toLowerCase() === "true";
-              node.inputs["default_value"] = boolValue;
+              // 添加更多日志来跟踪
+              console.log("Node inputs after setting:", node.inputs);
             }
           }
         });
