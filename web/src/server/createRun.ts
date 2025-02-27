@@ -91,7 +91,7 @@ export const createRun = withServerPromise(
     // Replace the inputs
     if (inputs && workflow_api) {
       // 1. 先处理所有图片上传
-      const uploadPromises = [];
+      const uploadPromises: Promise<void>[] = [];
       
       for (const key in inputs) {
         Object.entries(workflow_api).forEach(([_, node]) => {
