@@ -85,11 +85,29 @@ export const createRun = withServerPromise(
 
     const workflow_api = workflow_version_data.workflow_api;
 
+    // 添加日志来跟踪输入
+    console.log("Initial inputs:", inputs);
+
     // Replace the inputs
     if (inputs && workflow_api) {
       for (const key in inputs) {
         Object.entries(workflow_api).forEach(([_, node]) => {
           if (node.inputs["input_id"] === key) {
+            // 添加日志
+            console.log("Found matching node:", node.class_type, "for key:", key);
+            
+            // 对于图片输入的特殊处理
+            if (node.class_type === "ComfyUIDeployExternalImage" && 
+                typeof inputs[key] === 'string' && 
+                inputs[key].startsWith('data:image')) {
+              console.log("Processing image input for key:", key);
+              // 将 base64 转换为 URL
+              uploadBase64Image(inputs[key]).then(url => {
+                console.log("Uploaded image URL:", url);
+                node.inputs["default_value"] = url;
+              });
+            }
+
             node.inputs["input_id"] = inputs[key];
             
             // Fix for external text default value
@@ -117,6 +135,9 @@ export const createRun = withServerPromise(
         });
       }
     }
+
+    // 添加日志来查看最终的 workflow_api
+    console.log("Final workflow_api:", workflow_api);
 
     // 处理滑块参数
     if (inputs && inputs.ComfyUIDeployExternalNumberSlider !== undefined) {
@@ -156,15 +177,27 @@ export const createRun = withServerPromise(
     // 3. 异步处理机器请求
     (async () => {
       try {
-        // 处理工作流中的所有图片输入
-        if (inputs) {
-          for (const [key, value] of Object.entries(inputs)) {
-            if (typeof value === 'string' && value.startsWith('data:image')) {
-              // 将 base64 图片转换为 CDN URL
-              inputs[key] = await uploadBase64Image(value);
+        // 添加日志
+        console.log("Starting machine request with workflow_api:", workflow_api);
+
+        if (inputs && workflow_api) {
+          // 处理所有图片上传
+          const uploadPromises = Object.entries(workflow_api).map(async ([_, node]) => {
+            if (node.class_type === "ComfyUIDeployExternalImage" && 
+                typeof node.inputs["default_value"] === 'string' && 
+                node.inputs["default_value"].startsWith('data:image')) {
+              console.log("Uploading image for node:", node);
+              node.inputs["default_value"] = await uploadBase64Image(node.inputs["default_value"]);
+              console.log("Uploaded image URL:", node.inputs["default_value"]);
             }
-          }
+          });
+
+          // 等待所有图片上传完成
+          await Promise.all(uploadPromises);
         }
+
+        // 添加日志
+        console.log("Sending to ComfyUI with workflow_api:", workflow_api);
 
         switch (machine.type) {
           case "comfy-deploy-serverless":
