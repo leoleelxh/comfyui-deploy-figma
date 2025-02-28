@@ -22,7 +22,7 @@ export function RunWorkflowInline({
   workflow_version_id: string;
   machine_id: string;
 }) {
-  const [values, setValues] = useState<{ [key: string]: string | undefined }>({});
+  const [values, setValues] = useState<Record<string, string | number>>({});
   const [isLoading, setIsLoading] = useState(false);
 
   const user = useAuth();
@@ -48,10 +48,7 @@ export function RunWorkflowInline({
     }
     console.log(values);
 
-    const val = {
-      ...values,
-      ComfyUIDeployExternalNumberSlider: values.ComfyUIDeployExternalNumberSlider,
-    };
+    const val = values;
     setLoading2(true);
     setIsLoading(true);
     setStatus("preparing");
@@ -85,7 +82,7 @@ export function RunWorkflowInline({
         <AutoForm
           formSchema={schema}
           values={values}
-          onValuesChange={(newValues: Partial<{ [key: string]: string | undefined }>) => {
+          onValuesChange={(newValues: Partial<Record<string, string | number>>) => {
             setValues(prev => ({ ...prev, ...newValues }))
           }}
           onSubmit={runWorkflow}
