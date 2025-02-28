@@ -22,7 +22,7 @@ export function RunWorkflowInline({
   workflow_version_id: string;
   machine_id: string;
 }) {
-  const [values, setValues] = useState<Record<string, string | number>>({});
+  const [values, setValues] = useState<{ [key: string]: string | undefined }>({});
   const [isLoading, setIsLoading] = useState(false);
 
   const user = useAuth();
@@ -48,7 +48,10 @@ export function RunWorkflowInline({
     }
     console.log(values);
 
-    const val = values;
+    const val = Object.fromEntries(
+      Object.entries(values).map(([k, v]) => [k, v ?? ""])
+    );
+
     setLoading2(true);
     setIsLoading(true);
     setStatus("preparing");
@@ -82,7 +85,7 @@ export function RunWorkflowInline({
         <AutoForm
           formSchema={schema}
           values={values}
-          onValuesChange={(newValues: Partial<Record<string, string | number>>) => {
+          onValuesChange={(newValues: Partial<{ [key: string]: string | undefined }>) => {
             setValues(prev => ({ ...prev, ...newValues }))
           }}
           onSubmit={runWorkflow}
