@@ -8,7 +8,7 @@ import { withServerPromise } from "@/server/withServerPromise";
 import "server-only";
 import { headers } from "next/headers";
 import { db } from "@/db/db";
-import { workflowsTable } from "@/db/schema";
+import { workflowTable } from "@/db/schema";
 import { eq } from "drizzle-orm";
 
 export const editWorkflowOnMachine = withServerPromise(
@@ -48,12 +48,12 @@ export const editWorkflowOnMachine = withServerPromise(
     }
 
     await db
-      .update(workflowsTable)
+      .update(workflowTable)
       .set({
         machine_id: machine_id,
         updated_at: new Date(),
       })
-      .where(eq(workflowsTable.id, workflow_version_id));
+      .where(eq(workflowTable.id, workflow_version_id));
 
     return `${endpoint}?workflow_version_id=${encodeURIComponent(
       workflow_version_id,

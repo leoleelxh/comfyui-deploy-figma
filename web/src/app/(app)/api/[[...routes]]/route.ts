@@ -23,15 +23,14 @@ declare module "hono" {
   }
 }
 
-async function checkAuth(c: Context, next: Next, headers?: HeadersInit) {
-  const token = c.req.raw.headers.get("Authorization")?.split(" ")?.[1]; // Assuming token is sent as "Bearer your_token"
-  const userData = token ? parseJWT(token) : undefined;
-  if (!userData || token === undefined) {
-    return c.text("Invalid or expired token", {
-      status: 401,
-      headers: headers,
-    });
-  }
+async function checkAuth(c: Context, next: Next) {
+  const token = c.req.header("Authorization")?.replace("Bearer ", "");
+
+  if (!token) return c.text("No token", { status: 401 });
+
+  const userData = await parseJWT(token);
+
+  if (!userData) return c.text("Invalid token", { status: 401 });
 
   // If the key has expiration, this is a temporary key and not in our db, so we can skip checking
   if (userData.exp === undefined) {
@@ -39,7 +38,6 @@ async function checkAuth(c: Context, next: Next, headers?: HeadersInit) {
     if (revokedKey)
       return c.text("Revoked token", {
         status: 401,
-        headers: headers,
       });
   }
 
