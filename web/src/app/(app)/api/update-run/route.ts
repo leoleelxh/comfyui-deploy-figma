@@ -29,13 +29,13 @@ export async function POST(request: Request) {
     // 处理图片数据
     if (output_data.images) {
       for (const image of output_data.images) {
-        // 构建标准的 CDN URL，加入 bucket 名称
-        image.url = `${CDN_ENDPOINT}/${BUCKET}/outputs/runs/${run_id}/${image.filename}`;
-        // 如果有缩略图
+        // 修改：不包含 bucket 名称
+        image.url = `${CDN_ENDPOINT}/outputs/runs/${run_id}/${image.filename}`;
         if (image.thumbnail) {
-          image.thumbnail_url = `${CDN_ENDPOINT}/${BUCKET}/outputs/runs/${run_id}/thumbnails/${image.filename}`;
+          // 修改：不包含 bucket 名称
+          image.thumbnail_url = `${CDN_ENDPOINT}/outputs/runs/${run_id}/thumbnails/${image.filename}`;
         }
-        // 删除原始数据
+        // 删除原始数据以节省空间
         if (image.data) {
           delete image.data;
         }
