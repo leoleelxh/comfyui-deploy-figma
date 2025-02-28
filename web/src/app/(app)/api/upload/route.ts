@@ -6,7 +6,10 @@ import {
   createNewWorkflow,
   createNewWorkflowVersion,
 } from "../../../../server/createNewWorkflow";
-import { parseJWT } from "../../../../server/parseJWT";
+import { parseJWT } from "@/server/parseJWT";
+import { NextRequest } from "next/server";
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 // This is will be deprecated
 
@@ -35,14 +38,19 @@ export async function OPTIONS(request: Request) {
   });
 }
 
-export async function POST(request: Request) {
-  const token = request.headers.get("Authorization")?.split(" ")?.[1]; // Assuming token is sent as "Bearer your_token"
-  const userData = token ? parseJWT(token) : undefined;
+export const runtime = 'edge';
+
+export async function POST(req: NextRequest) {
+  const token = req.headers.get("Authorization")?.replace("Bearer ", "");
+
+  if (!token) {
+    return new NextResponse("No token", { status: 401 });
+  }
+
+  const userData = await parseJWT(token);
+
   if (!userData) {
-    return new NextResponse("Invalid or expired token", {
-      status: 401,
-      headers: corsHeaders,
-    });
+    return new NextResponse("Invalid token", { status: 401 });
   }
 
   const { user_id, org_id } = userData;
@@ -51,7 +59,7 @@ export async function POST(request: Request) {
 
   const [data, error] = await parseDataSafe(
     UploadRequest,
-    request,
+    req,
     corsHeaders,
   );
 
