@@ -243,22 +243,13 @@ export function PublicRunOutputs(props: {
   );
 }
 
-export function RunWorkflowButton({
+export function RunWorkflow({
   workflow,
-  machines,
 }: {
   workflow: Awaited<ReturnType<typeof findFirstTableWithVersion>>;
-  machines: Awaited<ReturnType<typeof getMachines>>;
 }) {
-  const [version] = useQueryState("version", {
-    defaultValue: workflow?.versions[0].version ?? 1,
-    ...parseAsInteger,
-  });
-  const [machine] = useSelectedMachine(machines);
-  const [isLoading, setIsLoading] = useState(false);
-
   const [values, setValues] = useState<{ [key: string]: string | undefined }>({});
-  const [open, setOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const schema = useMemo(() => {
     const workflow_version = getWorkflowVersionFromVersionIndex(
