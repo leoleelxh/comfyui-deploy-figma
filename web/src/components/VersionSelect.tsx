@@ -243,13 +243,21 @@ export function PublicRunOutputs(props: {
   );
 }
 
-export function RunWorkflow({
+export function RunWorkflowButton({
   workflow,
+  machines,
 }: {
   workflow: Awaited<ReturnType<typeof findFirstTableWithVersion>>;
+  machines: Awaited<ReturnType<typeof getMachines>>;
 }) {
+  const [version] = useQueryState("version", {
+    defaultValue: workflow?.versions[0].version ?? 1,
+    ...parseAsInteger,
+  });
+  const [machine] = useSelectedMachine(machines);
   const [values, setValues] = useState<{ [key: string]: string | undefined }>({});
   const [isLoading, setIsLoading] = useState(false);
+  const [open, setOpen] = useState(false);
 
   const schema = useMemo(() => {
     const workflow_version = getWorkflowVersionFromVersionIndex(
@@ -265,7 +273,9 @@ export function RunWorkflow({
   const runWorkflow = async () => {
     console.log(values);
 
-    const val = Object.keys(values).length > 0 ? values : undefined;
+    const val = Object.fromEntries(
+      Object.entries(values).map(([k, v]) => [k, v ?? ""])
+    );
 
     const workflow_version_id = workflow?.versions.find(
       (x) => x.version === version,
@@ -285,7 +295,6 @@ export function RunWorkflow({
           runOrigin: "manual",
         }),
       );
-      // console.log(res.json());
       setIsLoading(false);
     } catch (error) {
       setIsLoading(false);
