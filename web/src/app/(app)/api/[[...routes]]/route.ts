@@ -15,6 +15,7 @@ import { registerGetStatusRoute } from "@/routes/registerGetStatusRoute";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60; // 60 seconds
+export const runtime = 'edge';
 
 declare module "hono" {
   interface ContextVariableMap {

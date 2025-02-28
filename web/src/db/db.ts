@@ -1,5 +1,5 @@
-import { Pool, neonConfig } from "@neondatabase/serverless";
-import { drizzle as neonDrizzle } from "drizzle-orm/neon-serverless";
+import { neon } from '@neondatabase/serverless';
+import { drizzle } from 'drizzle-orm/neon-http';
 import * as schema from "./schema";
 
 const isDevContainer = process.env.REMOTE_CONTAINERS !== undefined;
@@ -20,11 +20,8 @@ if (process.env.VERCEL_ENV !== "production") {
   neonConfig.pipelineConnect = false;
 }
 
-export const db = neonDrizzle(
-  new Pool({
-    connectionString: process.env.POSTGRES_URL,
-  }),
-  {
-    schema,
-  },
-);
+// 使用支持 edge runtime 的数据库客户端
+const sql = neon(process.env.DATABASE_URL!);
+export const db = drizzle(sql, {
+  schema,
+});
