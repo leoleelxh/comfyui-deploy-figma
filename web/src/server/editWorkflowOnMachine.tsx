@@ -2,11 +2,14 @@
 
 import { getMachineById } from "@/server/curdMachine";
 import { auth } from "@clerk/nextjs";
-import jwt from "jsonwebtoken";
+import { SignJWT } from 'jose';
 import { getOrgOrUserDisplayName } from "@/server/getOrgOrUserDisplayName";
 import { withServerPromise } from "@/server/withServerPromise";
 import "server-only";
 import { headers } from "next/headers";
+import { db } from "@/db/db";
+import { workflowsTable } from "@/db/schema";
+import { eq } from "drizzle-orm";
 
 export const editWorkflowOnMachine = withServerPromise(
   async (workflow_version_id: string, machine_id: string) => {
@@ -23,14 +26,18 @@ export const editWorkflowOnMachine = withServerPromise(
 
     const machine = await getMachineById(machine_id);
 
-    const expireTime = "1w";
-    const token = jwt.sign(
-      { user_id: userId, org_id: orgId },
-      process.env.JWT_SECRET!,
-      {
-        expiresIn: expireTime,
-      },
-    );
+    const secret = new TextEncoder().encode(process.env.JWT_SECRET!);
+    const alg = 'HS256';
+
+    const jwt = new SignJWT(orgId ? 
+      { user_id: userId, org_id: orgId } : 
+      { user_id: userId }
+    )
+      .setProtectedHeader({ alg })
+      .setIssuedAt()
+      .setExpirationTime('30d');
+
+    const token = await jwt.sign(secret);
 
     const userName = await getOrgOrUserDisplayName(orgId, userId);
 
@@ -39,6 +46,14 @@ export const editWorkflowOnMachine = withServerPromise(
     if (machine.type === "comfy-deploy-serverless") {
       endpoint = machine.endpoint.replace("comfyui-api", "comfyui-app");
     }
+
+    await db
+      .update(workflowsTable)
+      .set({
+        machine_id: machine_id,
+        updated_at: new Date(),
+      })
+      .where(eq(workflowsTable.id, workflow_version_id));
 
     return `${endpoint}?workflow_version_id=${encodeURIComponent(
       workflow_version_id,
