@@ -6,7 +6,7 @@ import {
   createNewWorkflow,
   createNewWorkflowVersion,
 } from "../../../../server/createNewWorkflow";
-import { parseJWT } from "@/server/parseJWT";
+import { parseJWT, JWTPayload } from "@/server/parseJWT";
 import { NextRequest } from "next/server";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
