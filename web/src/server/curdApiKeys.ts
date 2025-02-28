@@ -105,10 +105,10 @@ export async function getAPIKeys() {
   }
 }
 
-export async function isKeyRevoked(key: string) {
-  const revokedKey = await db.query.apiKeyTable.findFirst({
-    where: and(eq(apiKeyTable.key, key), eq(apiKeyTable.revoked, true)),
+export async function isKeyRevoked(token: string) {
+  const key = await db.query.apiKeyTable.findFirst({
+    where: eq(apiKeyTable.key, token),
   });
-
-  return revokedKey !== undefined;
+  
+  return key?.revoked || false;
 }

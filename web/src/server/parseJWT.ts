@@ -1,14 +1,17 @@
-import { APIKeyBodyRequest } from "@/server/APIKeyBodyRequest";
-import jwt from "jsonwebtoken";
+import { jwtVerify, createRemoteJWKSet } from 'jose';
 
-export function parseJWT(token: string) {
+export async function parseJWT(token: string) {
   try {
-    // Verify the token - this also decodes it
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!);
-    return APIKeyBodyRequest.parse(decoded);
-  } catch (err) {
-    // Handle error (token is invalid, expired, etc.)
-    console.error(err);
-    return null;
+    const JWKS = createRemoteJWKSet(new URL(process.env.CLERK_JWKS_URL!))
+    
+    const { payload } = await jwtVerify(token, JWKS, {
+      issuer: process.env.CLERK_ISSUER,
+      audience: process.env.CLERK_AUDIENCE,
+    })
+    
+    return payload;
+  } catch (error) {
+    console.error('JWT verification failed:', error);
+    return undefined;
   }
 }

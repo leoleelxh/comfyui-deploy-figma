@@ -4,7 +4,17 @@ import { setupDevPlatform } from '@cloudflare/next-on-pages/next-dev'
 const nextConfig = {
   experimental: {
     runtime: 'edge',
-  }
+  },
+  webpack: (config, { isServer, nextRuntime }) => {
+    if (nextRuntime === 'edge') {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        stream: false,
+        crypto: false,
+      };
+    }
+    return config;
+  },
 }
 
 if (process.env.NODE_ENV === 'development') {
