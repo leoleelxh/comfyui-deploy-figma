@@ -1,17 +1,17 @@
-import { jwtVerify, createRemoteJWKSet } from 'jose';
+import { jwtVerify } from 'jose';
 
-export async function parseJWT(token: string) {
+export interface JWTPayload {
+  user_id: string;
+  org_id?: string | null;
+  exp?: number;
+}
+
+export async function parseJWT(token: string): Promise<JWTPayload | undefined> {
   try {
-    const JWKS = createRemoteJWKSet(new URL(process.env.CLERK_JWKS_URL!))
-    
-    const { payload } = await jwtVerify(token, JWKS, {
-      issuer: process.env.CLERK_ISSUER,
-      audience: process.env.CLERK_AUDIENCE,
-    })
-    
-    return payload;
-  } catch (error) {
-    console.error('JWT verification failed:', error);
+    const secret = new TextEncoder().encode(process.env.JWT_SECRET!);
+    const { payload } = await jwtVerify(token, secret);
+    return payload as JWTPayload;
+  } catch (e) {
     return undefined;
   }
 }

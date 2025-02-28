@@ -10,6 +10,7 @@ import { headers } from "next/headers";
 import { db } from "@/db/db";
 import { workflowTable } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { JWTPayload } from "@/server/parseJWT";
 
 export const editWorkflowOnMachine = withServerPromise(
   async (workflow_version_id: string, machine_id: string) => {
@@ -29,10 +30,10 @@ export const editWorkflowOnMachine = withServerPromise(
     const secret = new TextEncoder().encode(process.env.JWT_SECRET!);
     const alg = 'HS256';
 
-    const jwt = new SignJWT(orgId ? 
-      { user_id: userId, org_id: orgId } : 
-      { user_id: userId }
-    )
+    const jwt = new SignJWT({
+      user_id: userId,
+      org_id: orgId,
+    } as JWTPayload)
       .setProtectedHeader({ alg })
       .setIssuedAt()
       .setExpirationTime('30d');

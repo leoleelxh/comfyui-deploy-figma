@@ -7,6 +7,7 @@ import { eq } from "drizzle-orm";
 import { SignJWT } from 'jose';
 import { getOrgOrUserDisplayName } from "@/server/getOrgOrUserDisplayName";
 import ms from "ms";
+import { JWTPayload } from "@/server/parseJWT";
 
 const route = createRoute({
   method: "get",
@@ -151,10 +152,10 @@ const generateToken = async (userId: string, orgId?: string) => {
   const secret = new TextEncoder().encode(process.env.JWT_SECRET!);
   const alg = 'HS256';
 
-  const jwt = new SignJWT(orgId ? 
-    { user_id: userId, org_id: orgId } : 
-    { user_id: userId }
-  )
+  const jwt = new SignJWT({
+    user_id: userId,
+    org_id: orgId,
+  } as JWTPayload)
     .setProtectedHeader({ alg })
     .setIssuedAt()
     .setExpirationTime('30d');

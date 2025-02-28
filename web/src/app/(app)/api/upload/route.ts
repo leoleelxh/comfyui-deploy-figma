@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
     return new NextResponse("Invalid token", { status: 401 });
   }
 
-  const { user_id, org_id } = userData;
+  const { user_id, org_id } = userData as JWTPayload;
 
   if (!user_id) return new NextResponse("Invalid user_id", { status: 401 });
 
