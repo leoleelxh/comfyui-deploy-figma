@@ -257,7 +257,7 @@ export function RunWorkflowButton({
   const [machine] = useSelectedMachine(machines);
   const [isLoading, setIsLoading] = useState(false);
 
-  const [values, setValues] = useState<Record<string, string>>({});
+  const [values, setValues] = useState<{ [key: string]: string | undefined }>({});
   const [open, setOpen] = useState(false);
 
   const schema = useMemo(() => {
@@ -324,7 +324,9 @@ export function RunWorkflowButton({
           <AutoForm
             formSchema={schema}
             values={values}
-            onValuesChange={setValues}
+            onValuesChange={(newValues: Partial<{ [key: string]: string | undefined }>) => {
+              setValues(prev => ({ ...prev, ...newValues }))
+            }}
             onSubmit={runWorkflow}
             className="px-1"
           >
