@@ -5,7 +5,7 @@ import { apiKeyTable, authRequestsTable } from "@/db/schema";
 import { withServerPromise } from "@/server/withServerPromise";
 import { auth } from "@clerk/nextjs";
 import { and, desc, eq, isNull } from "drizzle-orm";
-import jwt from "jsonwebtoken";
+import { SignJWT } from 'jose';
 import { revalidatePath } from "next/cache";
 
 export const createAuthRequest = withServerPromise(
@@ -26,19 +26,20 @@ export const createAuthRequest = withServerPromise(
 
 export async function addNewAPIKey(name: string) {
   const { userId, orgId } = auth();
-
   if (!userId) throw new Error("No user id");
 
-  let token: string;
+  const secret = new TextEncoder().encode(process.env.JWT_SECRET!);
+  const alg = 'HS256';
 
-  if (orgId) {
-    token = jwt.sign(
-      { user_id: userId, org_id: orgId },
-      process.env.JWT_SECRET!,
-    );
-  } else {
-    token = jwt.sign({ user_id: userId }, process.env.JWT_SECRET!);
-  }
+  const jwt = new SignJWT(orgId ? 
+    { user_id: userId, org_id: orgId } : 
+    { user_id: userId }
+  )
+    .setProtectedHeader({ alg })
+    .setIssuedAt()
+    .setExpirationTime('30d');
+
+  const token = await jwt.sign(secret);
 
   const key = await db
     .insert(apiKeyTable)
@@ -51,7 +52,6 @@ export async function addNewAPIKey(name: string) {
     .returning();
 
   revalidatePath("/api-keys");
-
   return key[0];
 }
 

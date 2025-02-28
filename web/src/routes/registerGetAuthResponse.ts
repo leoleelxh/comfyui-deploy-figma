@@ -4,8 +4,7 @@ import type { App } from "@/routes/app";
 import { authError } from "@/routes/authError";
 import { z, createRoute } from "@hono/zod-openapi";
 import { eq } from "drizzle-orm";
-import jwt from "jsonwebtoken";
-import crypto from "crypto";
+import { SignJWT } from 'jose';
 import { getOrgOrUserDisplayName } from "@/server/getOrgOrUserDisplayName";
 import ms from "ms";
 
@@ -63,6 +62,12 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
 
+function generateRandomString(length: number) {
+  const array = new Uint8Array(length);
+  crypto.getRandomValues(array);
+  return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+}
+
 export const registerGetAuthResponse = (app: App) => {
   return app.openapi(route, async (c) => {
     const { request_id } = c.req.valid("param");
@@ -85,19 +90,12 @@ export const registerGetAuthResponse = (app: App) => {
       }
 
       if (result && result.user_id) {
-        const expireTime = "1w";
-        const token = jwt.sign(
-          { user_id: result.user_id, org_id: result.org_id },
-          process.env.JWT_SECRET!,
-          {
-            expiresIn: expireTime,
-          },
-        );
+        const token = await generateToken(result.user_id, result.org_id);
 
-        const hash = crypto.createHash("sha256").update(token).digest("hex");
+        const hash = generateRandomString(64);
 
         const now = new Date();
-        const expiryDate = new Date(now.getTime() + ms(expireTime));
+        const expiryDate = new Date(now.getTime() + ms('30d'));
 
         await db
           .update(authRequestsTable)
@@ -147,4 +145,19 @@ export const registerGetAuthResponse = (app: App) => {
       },
     );
   });
+};
+
+const generateToken = async (userId: string, orgId?: string) => {
+  const secret = new TextEncoder().encode(process.env.JWT_SECRET!);
+  const alg = 'HS256';
+
+  const jwt = new SignJWT(orgId ? 
+    { user_id: userId, org_id: orgId } : 
+    { user_id: userId }
+  )
+    .setProtectedHeader({ alg })
+    .setIssuedAt()
+    .setExpirationTime('30d');
+
+  return await jwt.sign(secret);
 };
