@@ -47,9 +47,13 @@ All notable changes to this project will be documented in this file.
   - Error handling
 
 - 图片处理功能增强
+
   - 支持 base64 图片自动转换为 R2 存储 URL
   - 优化 ComfyUIDeployExternalImage 组件的图片处理流程
   - 添加图片上传状态追踪和日志
+
+- 添加服务器端图片压缩功能，确保传入 ComfyUI 的图片大小控制在 1MB 以内
+- 使用 sharp 库进行智能图片压缩，保持原始尺寸但减小文件大小
 
 ## [1.x.x] - 2024-02-28
 
