@@ -760,7 +760,7 @@ SPACES_CDN_FORCE_PATH_STYLE="true"
 
 ### 更新 `README.md`
 
-``````markdown
+````markdown
 # ComfyUI Deploy Documentation
 
 ## 参数定义和传递
@@ -785,10 +785,8 @@ SPACES_CDN_FORCE_PATH_STYLE="true"
   }
 />
 ```
+````
 
-``````
-
-`````markdown
 #### API 处理示例
 
 在 `createRun` 函数中处理滑块参数：
@@ -798,7 +796,7 @@ if (inputs && inputs.ComfyUIDeployExternalNumberSlider !== undefined) {
   const sliderValue = inputs.ComfyUIDeployExternalNumberSlider; // 获取滑块的值
   console.log("Slider value:", sliderValue); // 处理逻辑，例如存储或传递给其他函数
 }
-``````
+```
 
 ## 修复过程记录
 
@@ -985,5 +983,31 @@ image.url = `${CDN_ENDPOINT}/outputs/runs/${run_id}/${image.filename}`;
    - 记录上传过程和状态
    - 跟踪参数传递
    - 便于调试和监控
+```
+
+# ComfyUI Deploy Figma
+
+A Figma plugin that allows designers to use ComfyUI directly within Figma.
+
+## Recent Updates
+
+- **Image Format Preservation**: The system now preserves the original image format (JPG, PNG, WebP) when uploading to R2 storage, which helps maintain image quality and reduce file size.
+- **Build Optimization**: Configured Vercel to only build and deploy from the main branch, improving development workflow.
+- **Bug Fixes**: Fixed issues with large images (>1MB) causing ComfyUI to become unresponsive.
+
+## Features
+
+- Generate images directly within Figma using ComfyUI
+- Support for inpainting with masks
+- Preserve original image formats
+- Optimized for performance with large images
+- Easy to use interface
+
+## Getting Started
+
+[Installation and usage instructions...]
+
+## Configuration
+
+[Configuration details...]
 ````
-``````

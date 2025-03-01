@@ -1,5 +1,7 @@
 # Changelog
 
+All notable changes to this project will be documented in this file.
+
 ## [Unreleased]
 
 ### Fixed
@@ -48,6 +50,23 @@
   - 支持 base64 图片自动转换为 R2 存储 URL
   - 优化 ComfyUIDeployExternalImage 组件的图片处理流程
   - 添加图片上传状态追踪和日志
+
+## [1.x.x] - 2024-02-28
+
+### Added
+
+- Vercel build configuration to only deploy from main branch
+
+### Changed
+
+- Image upload system now preserves original image formats (JPG, PNG, WebP)
+- Improved error handling in image processing pipeline
+
+### Fixed
+
+- Fixed issue where large images (>1MB) would cause ComfyUI to become unresponsive
+- Fixed image format conversion that was unnecessarily increasing file sizes
+- Improved stability of ComfyUI communication
 
 ## [1.0.1] - 2024-02-27
 
@@ -136,3 +155,7 @@ aws --endpoint-url=http://172.26.61.86:4566 s3api put-bucket-acl --bucket comfyu
 - 修复图片参数传递问题
   - 修正 input_id 参数的处理逻辑
   - 确保图片 URL 正确传递到 ComfyUI 节点
+
+## [Previous Version] - YYYY-MM-DD
+
+[Previous changelog entries...]
