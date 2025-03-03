@@ -66,55 +66,116 @@ sequenceDiagram
 
 ### 问题描述
 
-图片 URL 格式不一致，导致访问失败：
+在使用过程中，发现前端和 API 返回的图片 URL 格式不一致：
 
-```
-# 错误格式（包含 bucket）
-https://pub-xxx.r2.dev/comfyui-deploy/outputs/runs/{run_id}/image.png
+- 前端 URL：`https://pub-xxx.r2.dev/comfyui-deploy/outputs/runs/{run_id}/image.png`
+- API URL：`https://pub-xxx.r2.dev/outputs/runs/{run_id}/image.png`
 
-# 正确格式
-https://pub-xxx.r2.dev/outputs/runs/{run_id}/image.png
-```
+这导致前端无法正确显示图片。
 
 ### 解决方案
 
-修改 `update-run/route.ts` 中的 URL 构建逻辑：
+1. 统一移除 URL 中的 bucket 名称：
 
 ```typescript
 // 修改前
-image.url = `${CDN_ENDPOINT}/${BUCKET}/outputs/runs/${run_id}/${image.filename}`;
-
+url: `${CDN_ENDPOINT}/${BUCKET}/outputs/runs/${run_id}/${image.filename}`;
 // 修改后
-image.url = `${CDN_ENDPOINT}/outputs/runs/${run_id}/${image.filename}`;
+url: `${CDN_ENDPOINT}/outputs/runs/${run_id}/${image.filename}`;
 ```
 
-# 使用注意事项
+2. 优化 URL 替换逻辑：
 
-1. 工作流发布务必删除所有预览节点，不然会报错
-2. 默认值尽量不要加载过多的 base64 格式图像，不然会很慢
-3. API 请求处理流程：
-   - `/api/run` 接口会立即返回 task_id
-   - 使用 `/api/status/{task_id}` 轮询任务状态
-   - 任务状态包括：not-started, running, uploading, success, failed
-4. 超时处理：
-   - Vercel 函数有 60s 超时限制
-   - 任务创建后会立即返回，避免超时
-   - 使用状态轮询机制获取最终结果
+- 支持 R2 存储和 Digital Ocean 不同的 URL 格式
+- 添加多级 URL 替换，确保正确处理各种情况
+- 通过环境变量控制 URL 生成行为
 
-# API 调用流程
+3. 环境变量配置：
 
-```mermaid
-sequenceDiagram
-    Client->>Server: POST /api/run
-    Note over Server: 创建任务记录
-    Server-->>Client: 返回 task_id
-    Note over Server: 异步处理任务
-    Client->>Server: GET /api/status/{task_id}
-    Server-->>Client: 返回任务状态
-    Note over Client: 根据状态决定是否继续轮询
+```env
+# R2存储配置
+SPACES_CDN_DONT_INCLUDE_BUCKET="true"
+SPACES_CDN_FORCE_PATH_STYLE="true"
 ```
 
-localhost 方法不成功！
+### 修改文件
+
+- `web/src/routes/registerGetStatusRoute.ts`
+- `web/src/server/getRunsData.tsx`
+- `web/src/server/replaceCDNUrl.ts`
+
+## 4. 图片处理功能说明
+
+### 工作流程
+
+1. 图片上传流程
+
+   - 接收前端传入的 base64 格式图片
+   - 自动转换并上传到 R2 存储
+   - 生成可访问的 CDN URL
+   - 更新工作流中的图片节点参数
+
+2. 参数传递机制
+
+   ```typescript
+   // 示例：图片节点处理
+   if (node.class_type === "ComfyUIDeployExternalImage") {
+     const value = inputs[key];
+     if (typeof value === "string" && value.startsWith("data:image")) {
+       // 上传到 R2 并更新节点参数
+       node.inputs["input_id"] = url;
+     }
+   }
+   ```
+
+3. 执行顺序
+   - 先处理所有图片上传
+   - 等待上传完成
+   - 更新工作流参数
+   - 发送到 ComfyUI 执行
+
+### 注意事项
+
+1. 图片处理
+
+   - 支持 base64 格式的图片输入
+   - 自动处理图片上传和转换
+   - 确保上传完成后再执行工作流
+
+2. 参数设置
+
+   - 图片节点使用 input_id 参数传递 URL
+   - 保持与原有参数传递逻辑一致
+   - 支持动态的 input_id 命名
+
+3. 环境配置
+   需要配置以下环境变量：
+   ```env
+   SPACES_ENDPOINT=your_r2_endpoint
+   SPACES_ENDPOINT_CDN=your_cdn_endpoint
+   SPACES_BUCKET=your_bucket_name
+   SPACES_KEY=your_access_key
+   SPACES_SECRET=your_secret_key
+   ```
+
+### 技术实现
+
+1. 图片上传
+
+   - 使用 S3 兼容的 API 上传到 R2
+   - 生成唯一文件名避免冲突
+   - 设置正确的 Content-Type 和 ACL
+
+2. 异步处理
+
+   - 使用 Promise.all 等待所有上传完成
+   - 确保按正确顺序执行操作
+   - 完整的错误处理和状态更新
+
+3. 日志追踪
+   - 记录上传过程和状态
+   - 跟踪参数传递
+   - 便于调试和监控
 
 # ComfyUI Deploy
 
@@ -760,7 +821,7 @@ SPACES_CDN_FORCE_PATH_STYLE="true"
 
 ### 更新 `README.md`
 
-````markdown
+````README.md
 # ComfyUI Deploy Documentation
 
 ## 参数定义和传递
@@ -784,7 +845,8 @@ SPACES_CDN_FORCE_PATH_STYLE="true"
     setValues({ ...values, ComfyUIDeployExternalNumberSlider: e.target.value })
   }
 />
-```
+````
+
 ````
 
 #### API 处理示例
@@ -796,7 +858,7 @@ if (inputs && inputs.ComfyUIDeployExternalNumberSlider !== undefined) {
   const sliderValue = inputs.ComfyUIDeployExternalNumberSlider; // 获取滑块的值
   console.log("Slider value:", sliderValue); // 处理逻辑，例如存储或传递给其他函数
 }
-```
+````
 
 ## 修复过程记录
 
@@ -858,133 +920,6 @@ if (inputs && inputs.ComfyUIDeployExternalNumberSlider !== undefined) {
 
 ```
 
-# 重要更新：修复图片 URL 问题
-
-## 问题描述
-在使用 API 时，图片 URL 的格式不一致，导致某些情况下图片无法正常访问：
-
-1. 有时 URL 包含 bucket 名称：
-```
-
-https://pub-xxx.r2.dev/comfyui-deploy/outputs/runs/{run_id}/image.png
-
-```
-
-2. 有时不包含 bucket 名称（正确格式）：
-```
-
-https://pub-xxx.r2.dev/outputs/runs/{run_id}/image.png
-
-````
-
-## 问题原因
-1. 在 `/api/update-run` 接口中，URL 构建逻辑错误地包含了 bucket 名称
-2. 环境变量 `SPACES_CDN_DONT_INCLUDE_BUCKET="false"` 的设置影响了 URL 的构建
-
-## 解决方案
-修改 `web/src/app/(app)/api/update-run/route.ts` 中的 URL 构建逻辑：
-```typescript
-// 修改前
-image.url = `${CDN_ENDPOINT}/${BUCKET}/outputs/runs/${run_id}/${image.filename}`;
-
-// 修改后
-image.url = `${CDN_ENDPOINT}/outputs/runs/${run_id}/${image.filename}`;
-```
-
-## 技术细节
-
-1. URL 构建发生在 ComfyUI 生成图片后调用 `/api/update-run` 时
-2. 构建的 URL 被保存在数据库中
-3. 前端和 API 直接使用数据库中存储的 URL
-4. 不需要修改其他组件，因为 URL 在源头就被正确构建
-
-## 验证方法
-
-1. 使用 API 生成新图片
-2. 检查返回的图片 URL 格式
-3. 验证图片是否可以正常访问
-
-## 注意事项
-
-1. 确保环境变量设置正确
-2. 新生成的图片 URL 将自动使用正确格式
-3. 历史数据中的 URL 可能需要单独处理
-
-## 相关文件
-
-- `web/src/app/(app)/api/update-run/route.ts`
-- `web/src/routes/registerGetStatusRoute.ts`
-- `web/src/server/createRun.ts`
-```
-
-# 图片处理功能说明
-
-## 工作流程
-
-1. 图片上传流程
-   - 接收前端传入的 base64 格式图片
-   - 自动转换并上传到 R2 存储
-   - 生成可访问的 CDN URL
-   - 更新工作流中的图片节点参数
-
-2. 参数传递机制
-   ```typescript
-   // 示例：图片节点处理
-   if (node.class_type === "ComfyUIDeployExternalImage") {
-     const value = inputs[key];
-     if (typeof value === 'string' && value.startsWith('data:image')) {
-       // 上传到 R2 并更新节点参数
-       node.inputs["input_id"] = url;
-     }
-   }
-   ```
-
-3. 执行顺序
-   - 先处理所有图片上传
-   - 等待上传完成
-   - 更新工作流参数
-   - 发送到 ComfyUI 执行
-
-## 注意事项
-
-1. 图片处理
-   - 支持 base64 格式的图片输入
-   - 自动处理图片上传和转换
-   - 确保上传完成后再执行工作流
-
-2. 参数设置
-   - 图片节点使用 input_id 参数传递 URL
-   - 保持与原有参数传递逻辑一致
-   - 支持动态的 input_id 命名
-
-3. 环境配置
-   需要配置以下环境变量：
-   ```env
-   SPACES_ENDPOINT=your_r2_endpoint
-   SPACES_ENDPOINT_CDN=your_cdn_endpoint
-   SPACES_BUCKET=your_bucket_name
-   SPACES_KEY=your_access_key
-   SPACES_SECRET=your_secret_key
-   ```
-
-## 技术实现
-
-1. 图片上传
-   - 使用 S3 兼容的 API 上传到 R2
-   - 生成唯一文件名避免冲突
-   - 设置正确的 Content-Type 和 ACL
-
-2. 异步处理
-   - 使用 Promise.all 等待所有上传完成
-   - 确保按正确顺序执行操作
-   - 完整的错误处理和状态更新
-
-3. 日志追踪
-   - 记录上传过程和状态
-   - 跟踪参数传递
-   - 便于调试和监控
-```
-
 # ComfyUI Deploy Figma
 
 A Figma plugin that allows designers to use ComfyUI directly within Figma.
@@ -1010,4 +945,4 @@ A Figma plugin that allows designers to use ComfyUI directly within Figma.
 ## Configuration
 
 [Configuration details...]
-````
+```
