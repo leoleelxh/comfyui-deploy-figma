@@ -13,6 +13,14 @@ export function replaceCDNUrl(url: string) {
       `${cdnUrl.protocol}//${process.env.SPACES_BUCKET}.${cdnUrl.host}`
     );
   } else {
+    // 修改这里：先替换完整路径，再替换端点
+    // 这样可以处理两种情况：带bucket和不带bucket的URL
+    url = url.replace(
+      `${process.env.SPACES_ENDPOINT}/${process.env.SPACES_BUCKET}/comfyui-deploy`,
+      `${process.env.SPACES_ENDPOINT_CDN}`
+    );
+    
+    // 如果上面的替换没有生效，再尝试只替换端点
     url = url.replace(
       process.env.SPACES_ENDPOINT!,
       process.env.SPACES_ENDPOINT_CDN!
