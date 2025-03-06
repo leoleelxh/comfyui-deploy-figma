@@ -252,45 +252,42 @@ export const createRun = withServerPromise(
           }
 
           if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`ComfyUI error: ${response.status} - ${errorText}`);
+            throw new Error(`HTTP error! status: ${response.status}`);
           }
 
-          // 成功发送，更新状态为running
-          await db.update(workflowRunsTable)
-            .set({ 
+          // 如果成功，更新状态为 running
+          await db
+            .update(workflowRunsTable)
+            .set({
               status: "running",
-              started_at: new Date()
+              started_at: new Date(),
             })
             .where(eq(workflowRunsTable.id, workflow_run[0].id));
-          
-          console.log('Successfully sent task to ComfyUI');
-          return;
+
+          return; // 成功后退出重试循环
         } catch (error) {
           lastError = error as Error;
           console.error(`Attempt ${attempt} failed:`, error);
-          
           if (attempt < MAX_RETRIES) {
-            const waitTime = 1000 * attempt;
-            console.log(`Waiting ${waitTime}ms before retry...`);
-            await new Promise(resolve => setTimeout(resolve, waitTime));
-            continue;
+            // 等待一段时间后重试，使用指数退避
+            await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
           }
         }
       }
 
-      // 所有重试都失败了，更新状态为failed
-      console.error('All attempts to send task to ComfyUI failed');
-      await db.update(workflowRunsTable)
-        .set({ 
+      // 所有重试都失败后，更新状态为 failed
+      await db
+        .update(workflowRunsTable)
+        .set({
           status: "failed",
           ended_at: new Date(),
-          error: `Failed to connect to ComfyUI after ${MAX_RETRIES} attempts. Last error: ${lastError?.message}`
+          workflow_inputs: {
+            ...inputs,
+            __error: `Failed to connect to ComfyUI after ${MAX_RETRIES} attempts. Last error: ${lastError?.message}`
+          }
         })
         .where(eq(workflowRunsTable.id, workflow_run[0].id));
-    })().catch(error => {
-      console.error('Unexpected error in task processing:', error);
-    });
+    })();
 
     // 立即返回任务ID
     return {
