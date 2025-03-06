@@ -20,6 +20,7 @@ export function LiveStatus({
   );
 
   let status = run.status;
+  let queuePosition = run.workflow_inputs?.__queue_position;
 
   // const [view, setView] = useState<any>();
   // if (data?.json.event == "executing" && data.json.data.node == undefined) {
@@ -50,9 +51,11 @@ export function LiveStatus({
   return (
     <>
       <TableCell>
-        {data && status != "success"
-          ? `${data.json.event} - ${data.json.data.node}`
-          : "-"}
+        {queuePosition !== undefined ? 
+          `Queued (Position: ${queuePosition})` :
+          data && status != "success" ?
+            `${data.json.event} - ${data.json.data.node}` :
+            "-"}
       </TableCell>
       <TableCell className="truncate text-right">
         <StatusBadge status={status} />

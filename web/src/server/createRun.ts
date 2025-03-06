@@ -176,8 +176,8 @@ export const createRun = withServerPromise(
       })
       .returning();
 
-    // 异步发送任务到ComfyUI（包含重试机制）
-    (async () => {
+    // 使用 Promise 来处理异步任务发送，确保只发送一次
+    const sendTaskPromise = new Promise<void>(async (resolve, reject) => {
       const MAX_RETRIES = 3;
       let lastError: Error | null = null;
 
@@ -185,6 +185,34 @@ export const createRun = withServerPromise(
         try {
           console.log(`Attempting to send task to ComfyUI (attempt ${attempt}/${MAX_RETRIES})`);
           
+          // 首先检查 ComfyUI 的队列状态
+          let queueCheckResponse: Response;
+          try {
+            queueCheckResponse = await fetch(`${machine.endpoint}/comfyui-deploy/check-ws-status?client_id=comfy_deploy_instance`, {
+              signal: AbortSignal.timeout(5000),
+              cache: "no-store"
+            });
+            
+            if (queueCheckResponse.ok) {
+              const queueData = await queueCheckResponse.json();
+              if (queueData.remaining_queue > 0) {
+                // 更新数据库中的队列状态
+                await db
+                  .update(workflowRunsTable)
+                  .set({
+                    status: "queued",
+                    workflow_inputs: {
+                      ...inputs,
+                      __queue_position: queueData.remaining_queue
+                    }
+                  })
+                  .where(eq(workflowRunsTable.id, workflow_run[0].id));
+              }
+            }
+          } catch (error) {
+            console.warn("Failed to check queue status:", error);
+          }
+
           let response: Response;
           switch (machine.type) {
             case "comfy-deploy-serverless":
@@ -252,10 +280,17 @@ export const createRun = withServerPromise(
           }
 
           if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            const errorText = await response.text();
+            throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
           }
 
-          // 如果成功，更新状态为 running
+          // 尝试解析响应内容
+          const responseData = await response.json().catch(() => null);
+          if (!responseData) {
+            throw new Error('Invalid response from ComfyUI');
+          }
+
+          // 更新状态为 running
           await db
             .update(workflowRunsTable)
             .set({
@@ -264,30 +299,43 @@ export const createRun = withServerPromise(
             })
             .where(eq(workflowRunsTable.id, workflow_run[0].id));
 
-          return; // 成功后退出重试循环
+          console.log('Task sent successfully');
+          resolve();
+          return;
         } catch (error) {
           lastError = error as Error;
           console.error(`Attempt ${attempt} failed:`, error);
-          if (attempt < MAX_RETRIES) {
-            // 等待一段时间后重试，使用指数退避
-            await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
+          
+          if (attempt === MAX_RETRIES) {
+            // 最后一次尝试也失败了
+            await db
+              .update(workflowRunsTable)
+              .set({
+                status: "failed",
+                ended_at: new Date(),
+                workflow_inputs: {
+                  ...inputs,
+                  __error: `Failed to connect to ComfyUI after ${MAX_RETRIES} attempts. Last error: ${lastError?.message}`
+                }
+              })
+              .where(eq(workflowRunsTable.id, workflow_run[0].id));
+            
+            reject(lastError);
+            return;
           }
+
+          // 等待一段时间后重试，使用指数退避
+          const waitTime = Math.pow(2, attempt) * 1000;
+          console.log(`Waiting ${waitTime}ms before retry...`);
+          await new Promise(resolve => setTimeout(resolve, waitTime));
         }
       }
+    });
 
-      // 所有重试都失败后，更新状态为 failed
-      await db
-        .update(workflowRunsTable)
-        .set({
-          status: "failed",
-          ended_at: new Date(),
-          workflow_inputs: {
-            ...inputs,
-            __error: `Failed to connect to ComfyUI after ${MAX_RETRIES} attempts. Last error: ${lastError?.message}`
-          }
-        })
-        .where(eq(workflowRunsTable.id, workflow_run[0].id));
-    })();
+    // 启动任务发送过程，但不等待其完成
+    sendTaskPromise.catch(error => {
+      console.error('Task sending failed:', error);
+    });
 
     // 立即返回任务ID
     return {
