@@ -176,129 +176,128 @@ export const createRun = withServerPromise(
       })
       .returning();
 
-    // 4. 异步处理机器请求
+    // 异步发送任务到ComfyUI（包含重试机制）
     (async () => {
-      try {
-        // 直接发送到 ComfyUI，因为图片已经上传完成
-        console.log("Sending to ComfyUI with workflow_api:", workflow_api);
-        
-        switch (machine.type) {
-          case "comfy-deploy-serverless":
-          case "modal-serverless":
-            const _data = {
-              input: {
+      const MAX_RETRIES = 3;
+      let lastError: Error | null = null;
+
+      for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+        try {
+          console.log(`Attempting to send task to ComfyUI (attempt ${attempt}/${MAX_RETRIES})`);
+          
+          let response: Response;
+          switch (machine.type) {
+            case "comfy-deploy-serverless":
+            case "modal-serverless":
+              const _data = {
+                input: {
+                  ...shareData,
+                  prompt_id: prompt_id,
+                },
+              };
+
+              response = await fetch(`${machine.endpoint}/run`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify(_data),
+                signal: AbortSignal.timeout(5000), // 5秒超时
+                cache: "no-store",
+              });
+              break;
+
+            case "runpod-serverless":
+              const data = {
+                input: {
+                  ...shareData,
+                  prompt_id: prompt_id,
+                },
+              };
+
+              if (
+                !machine.auth_token &&
+                !machine.endpoint.includes("localhost") &&
+                !machine.endpoint.includes("127.0.0.1")
+              ) {
+                throw new Error("Machine auth token not found");
+              }
+
+              response = await fetch(`${machine.endpoint}/run`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${machine.auth_token}`,
+                },
+                body: JSON.stringify(data),
+                signal: AbortSignal.timeout(5000), // 5秒超时
+                cache: "no-store",
+              });
+              break;
+
+            case "classic":
+            default:
+              const body = {
                 ...shareData,
                 prompt_id: prompt_id,
-              },
-            };
+              };
+              const comfyui_endpoint = `${machine.endpoint}/comfyui-deploy/run`;
+              response = await fetch(comfyui_endpoint, {
+                method: "POST",
+                body: JSON.stringify(body),
+                signal: AbortSignal.timeout(5000), // 5秒超时
+                cache: "no-store",
+              });
+              break;
+          }
 
-            const ___result = await fetch(`${machine.endpoint}/run`, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify(_data),
-              cache: "no-store",
-            });
-            console.log(___result);
-            if (!___result.ok)
-              throw new Error(
-                `Error creating run, ${
-                  ___result.statusText
-                } ${await ___result.text()}`,
-              );
-            console.log(_data, ___result);
-            break;
-          case "runpod-serverless":
-            const data = {
-              input: {
-                ...shareData,
-                prompt_id: prompt_id,
-              },
-            };
+          if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`ComfyUI error: ${response.status} - ${errorText}`);
+          }
 
-            if (
-              !machine.auth_token &&
-              !machine.endpoint.includes("localhost") &&
-              !machine.endpoint.includes("127.0.0.1")
-            ) {
-              throw new Error("Machine auth token not found");
-            }
-
-            const __result = await fetch(`${machine.endpoint}/run`, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${machine.auth_token}`,
-              },
-              body: JSON.stringify(data),
-              cache: "no-store",
-            });
-            console.log(__result);
-            if (!__result.ok)
-              throw new Error(
-                `Error creating run, ${
-                  __result.statusText
-                } ${await __result.text()}`,
-              );
-            console.log(data, __result);
-            break;
-          case "classic":
-            const body = {
-              ...shareData,
-              prompt_id: prompt_id,
-            };
-            // console.log(body);
-            const comfyui_endpoint = `${machine.endpoint}/comfyui-deploy/run`;
-            const _result = await fetch(comfyui_endpoint, {
-              method: "POST",
-              body: JSON.stringify(body),
-              cache: "no-store",
-            });
-            // console.log(_result);
-
-            if (!_result.ok) {
-              let message = `Error creating run, ${_result.statusText}`;
-              try {
-                const result = await ComfyAPI_Run.parseAsync(
-                  await _result.json(),
-                );
-                message += ` ${result.node_errors}`;
-              } catch (error) {}
-              throw new Error(message);
-            }
-            // prompt_id = result.prompt_id;
-            break;
+          // 成功发送，更新状态为running
+          await db.update(workflowRunsTable)
+            .set({ 
+              status: "running",
+              started_at: new Date()
+            })
+            .where(eq(workflowRunsTable.id, workflow_run[0].id));
+          
+          console.log('Successfully sent task to ComfyUI');
+          return;
+        } catch (error) {
+          lastError = error as Error;
+          console.error(`Attempt ${attempt} failed:`, error);
+          
+          if (attempt < MAX_RETRIES) {
+            const waitTime = 1000 * attempt;
+            console.log(`Waiting ${waitTime}ms before retry...`);
+            await new Promise(resolve => setTimeout(resolve, waitTime));
+            continue;
+          }
         }
-        
-        // 更新状态为运行中
-        await db.update(workflowRunsTable)
-          .set({ 
-            status: "running",
-            started_at: new Date()
-          })
-          .where(eq(workflowRunsTable.id, workflow_run[0].id));
-
-      } catch (error) {
-        console.error('Machine request failed:', error);
-        // 更新状态为失败
-        await db.update(workflowRunsTable)
-          .set({ 
-            status: "failed",
-            ended_at: new Date()
-          })
-          .where(eq(workflowRunsTable.id, workflow_run[0].id));
       }
-    })().catch(console.error);
 
-    // 2. 立即返回任务 ID
-    const response = {
+      // 所有重试都失败了，更新状态为failed
+      console.error('All attempts to send task to ComfyUI failed');
+      await db.update(workflowRunsTable)
+        .set({ 
+          status: "failed",
+          ended_at: new Date(),
+          error: `Failed to connect to ComfyUI after ${MAX_RETRIES} attempts. Last error: ${lastError?.message}`
+        })
+        .where(eq(workflowRunsTable.id, workflow_run[0].id));
+    })().catch(error => {
+      console.error('Unexpected error in task processing:', error);
+    });
+
+    // 立即返回任务ID
+    return {
       workflow_run_id: workflow_run[0].id,
-      message: "Workflow run created",
+      message: "Workflow run created"
     };
-
-    return response;
-  },
+  }
 );
 
 export async function checkStatus(run_id: string) {
