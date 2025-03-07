@@ -271,6 +271,35 @@ if (process.env.SPACES_CDN_DONT_INCLUDE_BUCKET === "true") {
    - 验证 CORS 头部设置
    - 测试不同类型文件的访问
 
+## 1. URL 处理优化
+
+### 最新更新：统一 API 响应中的图片 URL 格式
+
+在 v1.3 版本中，我们统一了 API 响应中的图片 URL 格式，解决了前端和 Figma 插件之间的 URL 不一致问题：
+
+1. **问题描述**：
+
+   - Figma 插件和前端页面收到的图片 URL 格式不一致
+   - 部分 API 响应中包含了存储桶名称，导致访问失败
+
+2. **解决方案**：
+
+   - 统一使用 `replaceCDNUrl` 函数处理所有图片 URL
+   - 根据环境配置自动调整 URL 格式
+   - 确保 API 响应中的 URL 格式一致
+
+3. **环境配置**：
+
+```env
+# R2 生产环境配置
+SPACES_CDN_DONT_INCLUDE_BUCKET="true"    # 移除 URL 中的存储桶名称
+SPACES_CDN_FORCE_PATH_STYLE="false"      # 不使用路径风格
+
+# 本地开发环境配置
+SPACES_CDN_DONT_INCLUDE_BUCKET="false"   # 保留 URL 中的存储桶名称
+SPACES_CDN_FORCE_PATH_STYLE="true"       # 使用路径风格
+```
+
 # ComfyUI Deploy
 
 A deployment solution for ComfyUI workflows.

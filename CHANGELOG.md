@@ -178,37 +178,23 @@ aws --endpoint-url=http://172.26.61.86:4566 s3api put-bucket-acl --bucket comfyu
 
 ### Fixed
 
-- Fixed URL construction issues in local development:
-  - Fixed image URL format in local environment to correctly include bucket name
-  - Standardized URL format to `http://localhost:4566/comfyui-deploy/outputs/runs/{run_id}/{filename}`
-  - Fixed CORS issues in Figma plugin by ensuring correct URL format
-  - Improved URL handling logic in `replaceCDNUrl` function
-
-### Changed
-
-- Enhanced URL handling logic:
-  - Simplified URL replacement logic in `replaceCDNUrl`
-  - Added clear handling for different environments (R2, Digital Ocean, Local)
-  - Improved path-style URL support for local development
-  - Maintained compatibility with production R2 configuration
+- Fixed image URL inconsistency in API responses:
+  - Standardized URL handling in `update-run` API endpoint
+  - Ensured consistent URL format between frontend and Figma plugin
+  - Fixed URL construction to properly handle bucket names in different environments
+  - Unified URL handling through `replaceCDNUrl` function
 
 ### Technical Details
 
 #### URL Format by Environment
 
-1. Local Development:
-
-   - Input: `http://localhost:4566/comfyui-deploy/outputs/runs/{run_id}/{filename}`
-   - Output: `http://localhost:4566/comfyui-deploy/outputs/runs/{run_id}/{filename}`
-   - Maintains path-style format with bucket in path
-
-2. R2 Production:
+1. R2 Production (Current):
 
    - Input: `https://xxx.r2.cloudflarestorage.com/comfyui-deploy/outputs/runs/{run_id}/{filename}`
    - Output: `https://pub-xxx.r2.dev/outputs/runs/{run_id}/{filename}`
-   - Removes bucket name from path
+   - Bucket name is removed from path
 
-3. Digital Ocean:
-   - Input: `https://nyc3.digitaloceanspaces.com/comfyui-deploy/outputs/runs/{run_id}/{filename}`
-   - Output: `https://comfyui-deploy.nyc3.digitaloceanspaces.com/outputs/runs/{run_id}/{filename}`
-   - Uses subdomain-style format
+2. Local Development:
+   - Input: `http://localhost:4566/comfyui-deploy/outputs/runs/{run_id}/{filename}`
+   - Output: `http://localhost:4566/comfyui-deploy/outputs/runs/{run_id}/{filename}`
+   - Bucket name is preserved in path
