@@ -142,7 +142,7 @@ export const createRun = withServerPromise(
     for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
       try {
         const controller = new AbortController();
-        const TIMEOUT_MS = 55 * 1000;
+        const TIMEOUT_MS = 30 * 1000;
         const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
         try {
