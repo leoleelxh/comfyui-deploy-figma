@@ -191,7 +191,7 @@ export const createRun = withServerPromise(
                 cache: "no-store",
               }),
               new Promise((_, reject) => 
-                setTimeout(() => reject(new Error('Request timeout')), 30000)
+                setTimeout(() => reject(new Error('Request timeout')), 10000)
               ),
             ]) as Response;
 
@@ -229,7 +229,7 @@ export const createRun = withServerPromise(
                 cache: "no-store",
               }),
               new Promise((_, reject) => 
-                setTimeout(() => reject(new Error('Request timeout')), 30000)
+                setTimeout(() => reject(new Error('Request timeout')), 10000)
               ),
             ]) as Response;
 
@@ -254,7 +254,7 @@ export const createRun = withServerPromise(
                 cache: "no-store",
               }),
               new Promise((_, reject) => 
-                setTimeout(() => reject(new Error('Request timeout')), 30000)
+                setTimeout(() => reject(new Error('Request timeout')), 10000)
               ),
             ]) as Response;
 
