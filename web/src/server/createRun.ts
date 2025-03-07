@@ -136,13 +136,13 @@ export const createRun = withServerPromise(
 
     revalidatePath(`/${workflow_version_data.workflow_id}`);
 
-    const MAX_RETRIES = 3;
+    const MAX_RETRIES = 2;
     let lastError: Error | null = null;
 
     for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
       try {
         const controller = new AbortController();
-        const TIMEOUT_MS = 30 * 1000;
+        const TIMEOUT_MS = 15 * 1000;
         const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
         try {
@@ -261,7 +261,7 @@ export const createRun = withServerPromise(
         }
         
         if (attempt < MAX_RETRIES) {
-          await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
+          await new Promise(resolve => setTimeout(resolve, 1000));
         }
       }
     }
