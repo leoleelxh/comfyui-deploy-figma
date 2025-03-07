@@ -4,6 +4,7 @@ import { workflowRunOutputs, workflowRunsTable } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { replaceCDNUrl } from "@/server/replaceCDNUrl";
 
 const CDN_ENDPOINT = process.env.SPACES_ENDPOINT_CDN;
 const BUCKET = process.env.SPACES_BUCKET;
@@ -29,11 +30,11 @@ export async function POST(request: Request) {
     // 处理图片数据
     if (output_data.images) {
       for (const image of output_data.images) {
-        // 修改：包含 bucket 名称
-        image.url = `${CDN_ENDPOINT}/${process.env.SPACES_BUCKET}/outputs/runs/${run_id}/${image.filename}`;
+        // 使用 replaceCDNUrl 函数来处理 URL
+        image.url = replaceCDNUrl(`${process.env.SPACES_ENDPOINT}/${process.env.SPACES_BUCKET}/outputs/runs/${run_id}/${image.filename}`);
         if (image.thumbnail) {
-          // 修改：包含 bucket 名称
-          image.thumbnail_url = `${CDN_ENDPOINT}/${process.env.SPACES_BUCKET}/outputs/runs/${run_id}/thumbnails/${image.filename}`;
+          // 同样使用 replaceCDNUrl 函数处理缩略图 URL
+          image.thumbnail_url = replaceCDNUrl(`${process.env.SPACES_ENDPOINT}/${process.env.SPACES_BUCKET}/outputs/runs/${run_id}/thumbnails/${image.filename}`);
         }
         // 删除原始数据以节省空间
         if (image.data) {
