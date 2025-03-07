@@ -2,7 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [released 1.0]
+
+### 回退到可重试ComfyUI版本，但是会多次发送任务问题
+
 ## [Unreleased]
+
+
 
 ### Fixed
 
