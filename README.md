@@ -177,6 +177,100 @@ SPACES_CDN_FORCE_PATH_STYLE="true"
    - 跟踪参数传递
    - 便于调试和监控
 
+## 1. 本地开发环境 URL 处理
+
+### 问题描述
+
+在本地开发环境中，图片 URL 格式不正确导致以下问题：
+
+- Figma 插件无法显示图片（CORS 错误）
+- 前端页面图片显示异常
+- API 返回的图片 URL 格式不一致
+
+### 解决方案
+
+1. URL 格式统一：
+
+```typescript
+// 正确的本地环境 URL 格式
+http://localhost:4566/comfyui-deploy/outputs/runs/{run_id}/{filename}
+```
+
+2. 环境变量配置：
+
+```env
+# 本地开发环境配置
+SPACES_ENDPOINT="http://localhost:4566"
+SPACES_ENDPOINT_CDN="http://localhost:4566"
+SPACES_BUCKET="comfyui-deploy"
+SPACES_CDN_DONT_INCLUDE_BUCKET="false"  # 保留存储桶名称在路径中
+SPACES_CDN_FORCE_PATH_STYLE="true"      # 使用路径风格 URL
+```
+
+3. URL 处理逻辑优化：
+
+```typescript
+// replaceCDNUrl 函数逻辑
+if (process.env.SPACES_CDN_DONT_INCLUDE_BUCKET === "true") {
+  // R2 环境：移除存储桶名称
+  url = url.replace(
+    `${process.env.SPACES_ENDPOINT}/${process.env.SPACES_BUCKET}`,
+    process.env.SPACES_ENDPOINT_CDN!
+  );
+} else if (process.env.SPACES_CDN_FORCE_PATH_STYLE === "false") {
+  // Digital Ocean：使用子域名风格
+  const cdnUrl = new URL(process.env.SPACES_ENDPOINT_CDN!);
+  url = url.replace(
+    `${process.env.SPACES_ENDPOINT}/${process.env.SPACES_BUCKET}`,
+    `${cdnUrl.protocol}//${process.env.SPACES_BUCKET}.${cdnUrl.host}`
+  );
+} else {
+  // 本地开发：保持路径风格，只替换 endpoint
+  url = url.replace(
+    process.env.SPACES_ENDPOINT!,
+    process.env.SPACES_ENDPOINT_CDN!
+  );
+}
+```
+
+### 不同环境的 URL 格式
+
+1. **本地开发环境**
+
+   - 输入：`http://localhost:4566/comfyui-deploy/outputs/runs/{run_id}/{filename}`
+   - 输出：`http://localhost:4566/comfyui-deploy/outputs/runs/{run_id}/{filename}`
+   - 特点：保持存储桶在路径中
+
+2. **R2 生产环境**
+
+   - 输入：`https://xxx.r2.cloudflarestorage.com/comfyui-deploy/outputs/runs/{run_id}/{filename}`
+   - 输出：`https://pub-xxx.r2.dev/outputs/runs/{run_id}/{filename}`
+   - 特点：移除存储桶名称
+
+3. **Digital Ocean 环境**
+   - 输入：`https://nyc3.digitaloceanspaces.com/comfyui-deploy/outputs/runs/{run_id}/{filename}`
+   - 输出：`https://comfyui-deploy.nyc3.digitaloceanspaces.com/outputs/runs/{run_id}/{filename}`
+   - 特点：使用子域名风格
+
+### 注意事项
+
+1. **本地开发**
+
+   - 确保 LocalStack 正确配置并运行
+   - 存储桶必须设置为公开访问
+   - CORS 配置必须正确设置
+
+2. **URL 处理**
+
+   - 所有图片 URL 必须通过 `replaceCDNUrl` 函数处理
+   - 确保环境变量正确配置
+   - 注意不同环境的 URL 格式差异
+
+3. **调试建议**
+   - 使用浏览器开发工具检查图片 URL
+   - 验证 CORS 头部设置
+   - 测试不同类型文件的访问
+
 # ComfyUI Deploy
 
 A deployment solution for ComfyUI workflows.
@@ -847,102 +941,6 @@ SPACES_CDN_FORCE_PATH_STYLE="true"
 />
 ````
 
-````
-
 #### API 处理示例
 
-在 `createRun` 函数中处理滑块参数：
-
-```typescript
-if (inputs && inputs.ComfyUIDeployExternalNumberSlider !== undefined) {
-  const sliderValue = inputs.ComfyUIDeployExternalNumberSlider; // 获取滑块的值
-  console.log("Slider value:", sliderValue); // 处理逻辑，例如存储或传递给其他函数
-}
-````
-
-## 修复过程记录
-
-### 1. 问题描述
-
-在项目中，`ComfyUIDeployExternalNumberSlider` 参数未能正确暴露，导致前端和 API 无法识别和处理该参数。我们需要确保该参数能够在前端和 API 中正确传递，并且能够包含其细节，如数值范围和默认值。
-
-### 2. 改动范围
-
-- **文件**: `web/src/components/customInputNodes.tsx`
-  - **修改**: 添加 `ComfyUIDeployExternalNumberSlider` 的定义，指定其类型和描述。
-- **文件**: `web/src/server/createRun.ts`
-
-  - **修改**: 在 `createRun` 函数中处理 `ComfyUIDeployExternalNumberSlider` 参数，确保其值能够被正确获取和使用。
-
-- **文件**: `web/src/routes/registerCreateRunRoute.ts`
-
-  - **修改**: 确保在创建运行时，`inputs` 包含 `ComfyUIDeployExternalNumberSlider` 参数。
-
-- **文件**: `web/src/components/RunWorkflowInline.tsx`
-
-  - **修改**: 在提交表单时，确保滑块的值能够被正确传递。
-
-- **文件**: `web/src/app/(app)/api/update-run/route.ts`
-  - **修改**: 在更新运行状态时，确保能够处理 `ComfyUIDeployExternalNumberSlider` 参数。
-
-### 3. 代理链路
-
-- **前端**:
-
-  - 用户在 UI 中通过滑块输入值。
-  - `RunWorkflowInline` 组件将滑块的值存储在 `values` 状态中，并在提交时将其传递给 `createRun` 函数。
-
-- **API**:
-  - `registerCreateRunRoute` 接收请求，提取 `inputs` 中的 `ComfyUIDeployExternalNumberSlider` 参数。
-  - `createRun` 函数处理该参数，并在需要时使用其值。
-
-### 4. 参数细节的传递
-
-为了将 `ComfyUIDeployExternalNumberSlider` 的细节（如数值范围和默认值）传递到前端或 API，我们可以采取以下步骤：
-
-- **在 `customInputNodes.tsx` 中定义参数细节**:
-
-  ```typescript
-  ComfyUIDeployExternalNumberSlider: "float - (slider input with min and max values, default: 0, range: 0-100)",
-  ```
-
-- **在前端 UI 中**:
-
-  - 在滑块组件中，使用 `min`、`max` 和 `defaultValue` 属性来定义滑块的行为。
-
-- **在 API 中**:
-  - 在处理请求时，确保能够接收和使用这些参数细节。
-
-### 5. 后续建议
-
-- **文档更新**: 在 `README.md` 中添加关于新参数的详细说明，包括其定义、使用示例和注意事项。
-- **参数扩展**: 为其他参数定义类似的细节，以便在前端和 API 中能够一致地处理。
-
-```
-
-# ComfyUI Deploy Figma
-
-A Figma plugin that allows designers to use ComfyUI directly within Figma.
-
-## Recent Updates
-
-- **Image Format Preservation**: The system now preserves the original image format (JPG, PNG, WebP) when uploading to R2 storage, which helps maintain image quality and reduce file size.
-- **Build Optimization**: Configured Vercel to only build and deploy from the main branch, improving development workflow.
-- **Bug Fixes**: Fixed issues with large images (>1MB) causing ComfyUI to become unresponsive.
-
-## Features
-
-- Generate images directly within Figma using ComfyUI
-- Support for inpainting with masks
-- Preserve original image formats
-- Optimized for performance with large images
-- Easy to use interface
-
-## Getting Started
-
-[Installation and usage instructions...]
-
-## Configuration
-
-[Configuration details...]
-```
+在 `

@@ -5,21 +5,18 @@ export function replaceCDNUrl(url: string) {
       `${process.env.SPACES_ENDPOINT}/${process.env.SPACES_BUCKET}`,
       process.env.SPACES_ENDPOINT_CDN!
     );
-    // When using digital ocean, we need to use the bucket name in the URL
-  } else if (process.env.SPACES_CDN_FORCE_PATH_STYLE === "false") {
+  } 
+  // When using digital ocean, we need to use the bucket name in the URL
+  else if (process.env.SPACES_CDN_FORCE_PATH_STYLE === "false") {
     const cdnUrl = new URL(process.env.SPACES_ENDPOINT_CDN!);
     url = url.replace(
       `${process.env.SPACES_ENDPOINT}/${process.env.SPACES_BUCKET}`,
       `${cdnUrl.protocol}//${process.env.SPACES_BUCKET}.${cdnUrl.host}`
     );
-  } else {
-    // First try to replace the full path (with bucket)
-    url = url.replace(
-      `${process.env.SPACES_ENDPOINT}/${process.env.SPACES_BUCKET}`,
-      process.env.SPACES_ENDPOINT_CDN!
-    );
-    
-    // If the above replacement didn't work, try replacing just the endpoint
+  } 
+  // For local development or when force path style is true
+  else {
+    // Keep the bucket in the path but replace the endpoint
     url = url.replace(
       process.env.SPACES_ENDPOINT!,
       process.env.SPACES_ENDPOINT_CDN!
