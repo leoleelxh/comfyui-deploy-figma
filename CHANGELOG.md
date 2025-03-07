@@ -1,6 +1,9 @@
 # Changelog
 
 All notable changes to this project will be documented in this file.
+## [released 1.2.1]
+恢复到刚 修复图片上传到存储再进行任务处理的流程 状态
+
 
 ## [released 1.2]
 
