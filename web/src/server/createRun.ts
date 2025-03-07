@@ -267,11 +267,12 @@ export const createRun = withServerPromise(
             break;
         }
 
-        // 成功发送，更新开始时间
+        // 成功发送，更新开始时间和状态
         await db
           .update(workflowRunsTable)
           .set({
             started_at: new Date(),
+            status: "running"
           })
           .where(eq(workflowRunsTable.id, workflow_run[0].id));
 
@@ -290,6 +291,7 @@ export const createRun = withServerPromise(
             .update(workflowRunsTable)
             .set({
               started_at: new Date(),
+              status: "running"
             })
             .where(eq(workflowRunsTable.id, workflow_run[0].id));
 
