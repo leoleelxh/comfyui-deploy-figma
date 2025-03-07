@@ -158,6 +158,7 @@ export const createRun = withServerPromise(
         workflow_inputs: inputs,
         machine_id: machine.id,
         origin: runOrigin,
+        status: "not-started"
       })
       .returning();
 
@@ -267,12 +268,12 @@ export const createRun = withServerPromise(
             break;
         }
 
-        // 成功发送，更新开始时间和状态
+        // 任务成功发送后，更新状态为 running
         await db
           .update(workflowRunsTable)
           .set({
-            started_at: new Date(),
-            status: "running"
+            status: "running",
+            started_at: new Date()
           })
           .where(eq(workflowRunsTable.id, workflow_run[0].id));
 
@@ -285,13 +286,13 @@ export const createRun = withServerPromise(
         lastError = error;
         console.error(`Attempt ${attempt} failed:`, error);
 
-        // 如果是超时错误，我们认为请求可能已经成功发送
+        // 如果是超时错误，更新状态为 running（因为可能已经成功发送）
         if (error.message === 'Request timeout') {
           await db
             .update(workflowRunsTable)
             .set({
-              started_at: new Date(),
-              status: "running"
+              status: "running",
+              started_at: new Date()
             })
             .where(eq(workflowRunsTable.id, workflow_run[0].id));
 
@@ -309,11 +310,12 @@ export const createRun = withServerPromise(
       }
     }
 
-    // 所有重试都失败
+    // 所有重试都失败，更新状态为 failed
     await db
       .update(workflowRunsTable)
       .set({
         status: "failed",
+        ended_at: new Date()
       })
       .where(eq(workflowRunsTable.id, workflow_run[0].id));
 
