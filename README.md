@@ -944,32 +944,38 @@ SPACES_CDN_FORCE_PATH_STYLE="true"
 
 ### 更新 `README.md`
 
-````README.md
-# ComfyUI Deploy Documentation
+## Task Creation and Error Handling
 
-## 参数定义和传递
+The system implements a robust task creation and error handling mechanism:
 
-### ComfyUIDeployExternalNumberSlider
+### Task Creation
 
-- **类型**: float
-- **描述**: 滑块输入，允许用户选择一个数值。
-- **默认值**: 0
-- **范围**: 0 - 100
+- Each task gets a unique ID using UUID v4
+- Tasks are processed linearly to ensure consistency
+- Status updates are handled asynchronously
 
-#### 前端实现示例
+### Error Handling
 
-```jsx
-<input
-  type="range"
-  min="0"
-  max="100"
-  defaultValue="0"
-  onChange={(e) =>
-    setValues({ ...values, ComfyUIDeployExternalNumberSlider: e.target.value })
-  }
-/>
-````
+- Automatic retries for transient failures
+  - Maximum 3 retry attempts
+  - Exponential backoff delay
+  - 55-second timeout per attempt
+- Detailed error logging and status tracking
+- Graceful failure handling with status updates
 
-#### API 处理示例
+### Environment Specific Behavior
 
-在 `
+- Local Development:
+  - Endpoint: http://localhost:4566
+  - No auth token required
+  - Preserves bucket name in paths
+- Production (R2/Digital Ocean):
+  - Requires valid auth tokens
+  - Uses appropriate endpoint format
+  - Handles CORS properly
+
+### Best Practices
+
+- Always check task status using the provided endpoints
+- Handle timeouts appropriately in client code
+- Monitor task progress through status updates

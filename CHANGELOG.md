@@ -198,3 +198,38 @@ aws --endpoint-url=http://172.26.61.86:4566 s3api put-bucket-acl --bucket comfyu
    - Input: `http://localhost:4566/comfyui-deploy/outputs/runs/{run_id}/{filename}`
    - Output: `http://localhost:4566/comfyui-deploy/outputs/runs/{run_id}/{filename}`
    - Bucket name is preserved in path
+
+## [1.4.0] - 2024-03-XX
+
+### Changed
+
+- 优化了任务创建逻辑，移除了不必要的幂等性检查
+- 简化了状态管理，减少了数据库操作
+- 改进了错误处理机制，增加了重试功能
+
+### Added
+
+- 添加了请求超时控制（55 秒）
+- 添加了指数退避重试机制（最多 3 次重试）
+- 添加了更详细的错误日志
+
+### Fixed
+
+- 修复了 Figma 插件多次创建相同任务的问题
+- 修复了任务状态更新不及时的问题
+- 修复了在高负载情况下的稳定性问题
+
+### Technical Details
+
+- 重试机制：
+  - 最大重试次数：3 次
+  - 重试间隔：指数退避（2^n 秒）
+  - 超时设置：55 秒（适配 Vercel 限制）
+- 错误处理：
+  - 网络错误自动重试
+  - 超时错误立即失败
+  - 保留详细错误信息
+- 状态管理：
+  - 创建时不设置初始状态
+  - 成功时更新 started_at
+  - 失败时设置 status: "failed"
