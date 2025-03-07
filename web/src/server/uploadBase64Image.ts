@@ -4,11 +4,19 @@ import sharp from "sharp"; // 需要安装: npm install sharp
 
 const s3Client = new S3Client({
   endpoint: process.env.SPACES_ENDPOINT,
-  region: "auto",
+  region: process.env.SPACES_REGION || "auto",  // 使用环境变量中的 region，如果没有则默认 auto
   credentials: {
     accessKeyId: process.env.SPACES_KEY || "",
     secretAccessKey: process.env.SPACES_SECRET || "",
   },
+  forcePathStyle: process.env.SPACES_CDN_FORCE_PATH_STYLE === "true",  // 添加 LocalStack 所需配置
+});
+
+// 添加调试日志
+console.log("S3 Client Config:", {
+  endpoint: process.env.SPACES_ENDPOINT,
+  region: process.env.SPACES_REGION || "auto",
+  forcePathStyle: process.env.SPACES_CDN_FORCE_PATH_STYLE === "true"
 });
 
 // 图片压缩函数 - 只压缩数据，不改变尺寸
@@ -87,7 +95,9 @@ export async function uploadBase64Image(base64Data: string) {
     }));
 
     // 返回 CDN URL
-    return `${process.env.SPACES_ENDPOINT_CDN}/uploads/${filename}`;
+    return process.env.SPACES_CDN_FORCE_PATH_STYLE === "true"
+      ? `${process.env.SPACES_ENDPOINT_CDN}/${process.env.SPACES_BUCKET}/uploads/${filename}`
+      : `${process.env.SPACES_ENDPOINT_CDN}/uploads/${filename}`;
   }
   
   // 新的处理逻辑，保留原始格式
@@ -125,5 +135,7 @@ export async function uploadBase64Image(base64Data: string) {
   }));
 
   // 返回 CDN URL
-  return `${process.env.SPACES_ENDPOINT_CDN}/uploads/${filename}`;
+  return process.env.SPACES_CDN_FORCE_PATH_STYLE === "true"
+    ? `${process.env.SPACES_ENDPOINT_CDN}/${process.env.SPACES_BUCKET}/uploads/${filename}`
+    : `${process.env.SPACES_ENDPOINT_CDN}/uploads/${filename}`;
 } 

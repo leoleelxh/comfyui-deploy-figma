@@ -233,3 +233,30 @@ aws --endpoint-url=http://172.26.61.86:4566 s3api put-bucket-acl --bucket comfyu
   - 创建时不设置初始状态
   - 成功时更新 started_at
   - 失败时设置 status: "failed"
+
+## [1.1.0] - 2024-03-XX
+
+### Changed
+
+- 优化了 ComfyUI 通讯机制
+  - 使用 Promise.race 替代 AbortController 进行超时控制，提高了在 Vercel Serverless 环境下的稳定性
+  - 将单次请求超时时间调整为 30 秒，避免触发 Vercel 60 秒限制
+  - 优化重试机制，使用线性增长的等待时间（2-6 秒），提高请求成功率
+  - 改进了超时错误处理，当请求超时时会将任务标记为已开始，避免因超时导致任务丢失
+
+### Fixed
+
+- 修复了在 Vercel 环境下因请求超时导致 Figma 插件不进入轮询状态的问题
+- 修复了在网络状态不稳定时可能出现的任务状态不一致问题
+
+## [1.1.1] - 2025-03-07
+
+### Fixed
+
+- Fixed image upload URL construction for different storage environments
+  - Added support for LocalStack S3 in development environment
+  - Maintained compatibility with Cloudflare R2 in production
+  - Fixed image access issues in ComfyUI workflow
+- Added environment-aware URL path construction
+  - Uses bucket name in path for LocalStack (`SPACES_CDN_FORCE_PATH_STYLE=true`)
+  - Maintains clean URLs for R2 (`SPACES_CDN_FORCE_PATH_STYLE=false`)

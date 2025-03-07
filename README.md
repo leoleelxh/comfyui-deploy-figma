@@ -925,11 +925,14 @@ SPACES_BUCKET="comfyui-deploy"
 SPACES_KEY="test"
 SPACES_SECRET="test"
 SPACES_REGION="us-east-1"
-SPACES_CDN_DONT_INCLUDE_BUCKET="false"
 SPACES_CDN_FORCE_PATH_STYLE="true"
 ```
 
-> Note: When running ComfyUI on Windows with LocalStack in WSL2, use the WSL2 IP address instead of localhost.
+For LocalStack setup:
+
+1. Create bucket: `aws --endpoint-url=http://localhost:4566 s3 mb s3://your-bucket-name`
+2. Create uploads directory: `aws --endpoint-url=http://localhost:4566 s3api put-object --bucket your-bucket-name --key uploads/`
+3. Set bucket public access: `aws --endpoint-url=http://localhost:4566 s3api put-bucket-policy --bucket your-bucket-name --policy '{"Version":"2012-10-17","Statement":[{"Sid":"PublicRead","Effect":"Allow","Principal":"*","Action":"s3:GetObject","Resource":"arn:aws:s3:::your-bucket-name/*"}]}'`
 
 ### Image Processing Flow
 
@@ -979,3 +982,63 @@ The system implements a robust task creation and error handling mechanism:
 - Always check task status using the provided endpoints
 - Handle timeouts appropriately in client code
 - Monitor task progress through status updates
+
+## Request Timeout and Retry Mechanism
+
+The system implements a robust request handling mechanism for ComfyUI communication:
+
+### Timeout Control
+
+- Single request timeout: 30 seconds
+- Uses Promise.race for reliable timeout handling
+- Graceful timeout handling: Tasks may continue processing even if response times out
+
+### Retry Mechanism
+
+- Maximum 3 retry attempts
+- Linear backoff strategy: 2-6 seconds between retries
+- Intelligent error handling:
+  - Timeout errors: Task marked as started (may continue processing)
+  - Network errors: Immediate retry
+  - Other errors: Retry with backoff
+
+### Error States
+
+- Timeout: Task marked as "started" (ComfyUI may still process the request)
+- Failed after retries: Task marked as "failed"
+- Success: Task marked as "started" with timestamp
+
+This mechanism ensures reliable task processing even in unstable network conditions or when dealing with long-running tasks.
+
+## Storage Configuration
+
+The application supports two storage environments:
+
+### Production (Cloudflare R2)
+
+```env
+SPACES_ENDPOINT="https://xxx.r2.cloudflarestorage.com"
+SPACES_ENDPOINT_CDN="https://pub-xxx.r2.dev"
+SPACES_REGION="nyc3"
+SPACES_BUCKET="your-bucket-name"
+SPACES_CDN_DONT_INCLUDE_BUCKET="true"
+SPACES_CDN_FORCE_PATH_STYLE="false"
+```
+
+### Development (LocalStack)
+
+```env
+SPACES_ENDPOINT="http://localhost:4566"
+SPACES_ENDPOINT_CDN="http://localhost:4566"
+SPACES_BUCKET="your-bucket-name"
+SPACES_KEY="test"
+SPACES_SECRET="test"
+SPACES_REGION="us-east-1"
+SPACES_CDN_FORCE_PATH_STYLE="true"
+```
+
+For LocalStack setup:
+
+1. Create bucket: `aws --endpoint-url=http://localhost:4566 s3 mb s3://your-bucket-name`
+2. Create uploads directory: `aws --endpoint-url=http://localhost:4566 s3api put-object --bucket your-bucket-name --key uploads/`
+3. Set bucket public access: `aws --endpoint-url=http://localhost:4566 s3api put-bucket-policy --bucket your-bucket-name --policy '{"Version":"2012-10-17","Statement":[{"Sid":"PublicRead","Effect":"Allow","Principal":"*","Action":"s3:GetObject","Resource":"arn:aws:s3:::your-bucket-name/*"}]}'`

@@ -88,30 +88,57 @@ export const createRun = withServerPromise(
 
     // 处理输入参数
     if (inputs && workflow_api) {
+      // 先处理所有图片上传
+      const uploadPromises: Promise<void>[] = [];
+      
+      console.log("Initial inputs:", inputs);
+      
       for (const key in inputs) {
         Object.entries(workflow_api).forEach(([_, node]) => {
           if (node.inputs["input_id"] === key) {
-            node.inputs["input_id"] = inputs[key];
-            
-            if (node.class_type == "ComfyUIDeployExternalText") {
-              node.inputs["default_value"] = inputs[key];
-            }
-            if (node.class_type == "ComfyUIDeployExternalNumberSlider") {
-              node.inputs["default_value"] = inputs[key];
-            }
-            if (node.class_type == "ComfyUIDeployExternalLora") {
-              node.inputs["default_value"] = inputs[key];
-            }
-            if (node.class_type == "ComfyUIDeployExternalCheckpoint") {
-              node.inputs["default_value"] = inputs[key];
-            }
-            if (node.class_type == "ComfyUIDeployExternalBoolean") {
-              const boolValue = String(inputs[key]).toLowerCase() === "true";
-              node.inputs["default_value"] = boolValue;
+            if (node.class_type === "ComfyUIDeployExternalImage") {
+              const value = inputs[key];
+              if (typeof value === 'string' && value.startsWith('data:image')) {
+                console.log(`Processing image upload for key: ${key}`);
+                uploadPromises.push(
+                  uploadBase64Image(value).then(url => {
+                    console.log(`Image uploaded successfully, URL: ${url}`);
+                    node.inputs["input_id"] = url;
+                  })
+                );
+              }
+            } else {
+              node.inputs["input_id"] = inputs[key];
+              
+              if (node.class_type == "ComfyUIDeployExternalText") {
+                node.inputs["default_value"] = inputs[key];
+              }
+              if (node.class_type == "ComfyUIDeployExternalNumberSlider") {
+                node.inputs["default_value"] = inputs[key];
+              }
+              if (node.class_type == "ComfyUIDeployExternalLora") {
+                node.inputs["default_value"] = inputs[key];
+              }
+              if (node.class_type == "ComfyUIDeployExternalCheckpoint") {
+                node.inputs["default_value"] = inputs[key];
+              }
+              if (node.class_type == "ComfyUIDeployExternalBoolean") {
+                const boolValue = String(inputs[key]).toLowerCase() === "true";
+                node.inputs["default_value"] = boolValue;
+              }
             }
           }
         });
       }
+      
+      // 等待所有图片上传完成
+      if (uploadPromises.length > 0) {
+        console.log(`Waiting for ${uploadPromises.length} image uploads to complete...`);
+        await Promise.all(uploadPromises);
+        console.log("All images uploaded successfully");
+      }
+
+      console.log("Final workflow_api:", workflow_api);
     }
 
     const prompt_id = v4();
