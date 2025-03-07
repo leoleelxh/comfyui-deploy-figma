@@ -158,7 +158,8 @@ export const createRun = withServerPromise(
         workflow_inputs: inputs,
         machine_id: machine.id,
         origin: runOrigin,
-        status: "not-started"
+        status: "not-started",
+        started_at: new Date()
       })
       .returning();
 
@@ -268,15 +269,7 @@ export const createRun = withServerPromise(
             break;
         }
 
-        // 任务成功发送后，更新状态为 running
-        await db
-          .update(workflowRunsTable)
-          .set({
-            status: "running",
-            started_at: new Date()
-          })
-          .where(eq(workflowRunsTable.id, workflow_run[0].id));
-
+        // 任务发送成功后，不立即更新状态，让 ComfyUI 通过 update-run 更新状态
         return {
           workflow_run_id: workflow_run[0].id,
           message: "Successful workflow run",
@@ -286,16 +279,8 @@ export const createRun = withServerPromise(
         lastError = error;
         console.error(`Attempt ${attempt} failed:`, error);
 
-        // 如果是超时错误，更新状态为 running（因为可能已经成功发送）
+        // 如果是超时错误，也不更新状态
         if (error.message === 'Request timeout') {
-          await db
-            .update(workflowRunsTable)
-            .set({
-              status: "running",
-              started_at: new Date()
-            })
-            .where(eq(workflowRunsTable.id, workflow_run[0].id));
-
           return {
             workflow_run_id: workflow_run[0].id,
             message: "Workflow run initiated (timeout occurred but request may have succeeded)",
@@ -310,7 +295,7 @@ export const createRun = withServerPromise(
       }
     }
 
-    // 所有重试都失败，更新状态为 failed
+    // 所有重试都失败时才更新状态为 failed
     await db
       .update(workflowRunsTable)
       .set({
