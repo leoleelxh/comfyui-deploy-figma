@@ -136,108 +136,129 @@ export const createRun = withServerPromise(
 
     revalidatePath(`/${workflow_version_data.workflow_id}`);
 
-    const MAX_RETRIES = 2;
+    const MAX_RETRIES = 3;
     let lastError: Error | null = null;
 
     for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
       try {
-        const controller = new AbortController();
-        const TIMEOUT_MS = 15 * 1000;
-        const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
+        let response: Response;
+        switch (machine.type) {
+          case "comfy-deploy-serverless":
+          case "modal-serverless":
+            const _data = {
+              input: {
+                ...shareData,
+                prompt_id: workflow_run[0].id,
+              },
+            };
 
-        try {
-          let response: Response;
-          switch (machine.type) {
-            case "comfy-deploy-serverless":
-            case "modal-serverless":
-              const _data = {
-                input: {
-                  ...shareData,
-                  prompt_id: workflow_run[0].id,
-                },
-              };
-
-              response = await fetch(`${machine.endpoint}/run`, {
+            response = await Promise.race([
+              fetch(`${machine.endpoint}/run`, {
                 method: "POST",
                 headers: {
                   "Content-Type": "application/json",
                 },
                 body: JSON.stringify(_data),
-                signal: controller.signal,
                 cache: "no-store",
-              });
-              if (!response.ok) {
-                throw new Error(
-                  `Error creating run, ${
-                    response.statusText
-                  } ${await response.text()}`,
-                );
-              }
-              break;
+              }),
+              new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Request timeout')), 30000)
+              ),
+            ]) as Response;
 
-            case "runpod-serverless":
-              const data = {
-                input: {
-                  ...shareData,
-                  prompt_id: workflow_run[0].id,
-                },
-              };
+            if (!response.ok) {
+              throw new Error(
+                `Error creating run, ${response.statusText} ${await response.text()}`,
+              );
+            }
+            break;
 
-              if (
-                !machine.auth_token &&
-                !machine.endpoint.includes("localhost") &&
-                !machine.endpoint.includes("127.0.0.1")
-              ) {
-                throw new Error("Machine auth token not found");
-              }
+          case "runpod-serverless":
+            const data = {
+              input: {
+                ...shareData,
+                prompt_id: workflow_run[0].id,
+              },
+            };
 
-              response = await fetch(`${machine.endpoint}/run`, {
+            if (
+              !machine.auth_token &&
+              !machine.endpoint.includes("localhost") &&
+              !machine.endpoint.includes("127.0.0.1")
+            ) {
+              throw new Error("Machine auth token not found");
+            }
+
+            response = await Promise.race([
+              fetch(`${machine.endpoint}/run`, {
                 method: "POST",
                 headers: {
                   "Content-Type": "application/json",
                   Authorization: `Bearer ${machine.auth_token}`,
                 },
                 body: JSON.stringify(data),
-                signal: controller.signal,
                 cache: "no-store",
-              });
-              if (!response.ok) {
-                throw new Error(
-                  `Error creating run, ${
-                    response.statusText
-                  } ${await response.text()}`,
-                );
-              }
-              break;
+              }),
+              new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Request timeout')), 30000)
+              ),
+            ]) as Response;
 
-            case "classic":
-            default:
-              const body = {
-                ...shareData,
-                prompt_id: workflow_run[0].id,
-              };
-              const comfyui_endpoint = `${machine.endpoint}/comfyui-deploy/run`;
-              response = await fetch(comfyui_endpoint, {
+            if (!response.ok) {
+              throw new Error(
+                `Error creating run, ${response.statusText} ${await response.text()}`,
+              );
+            }
+            break;
+
+          case "classic":
+          default:
+            const body = {
+              ...shareData,
+              prompt_id: workflow_run[0].id,
+            };
+            const comfyui_endpoint = `${machine.endpoint}/comfyui-deploy/run`;
+            response = await Promise.race([
+              fetch(comfyui_endpoint, {
                 method: "POST",
                 body: JSON.stringify(body),
-                signal: controller.signal,
                 cache: "no-store",
-              });
+              }),
+              new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Request timeout')), 30000)
+              ),
+            ]) as Response;
 
-              if (!response.ok) {
-                let message = `Error creating run, ${response.statusText}`;
-                try {
-                  const result = await ComfyAPI_Run.parseAsync(
-                    await response.json(),
-                  );
-                  message += ` ${result.node_errors}`;
-                } catch (error) {}
-                throw new Error(message);
-              }
-              break;
-          }
+            if (!response.ok) {
+              let message = `Error creating run, ${response.statusText}`;
+              try {
+                const result = await ComfyAPI_Run.parseAsync(await response.json());
+                message += ` ${result.node_errors}`;
+              } catch (error) {}
+              throw new Error(message);
+            }
+            break;
+        }
 
-          // 成功发送，更新开始时间
+        // 成功发送，更新开始时间
+        await db
+          .update(workflowRunsTable)
+          .set({
+            started_at: new Date(),
+          })
+          .where(eq(workflowRunsTable.id, workflow_run[0].id));
+
+        return {
+          workflow_run_id: workflow_run[0].id,
+          message: "Successful workflow run",
+        };
+
+      } catch (error: any) {
+        lastError = error;
+        console.error(`Attempt ${attempt} failed:`, error);
+
+        // 如果是超时错误，我们认为请求可能已经成功发送
+        if (error.message === 'Request timeout') {
           await db
             .update(workflowRunsTable)
             .set({
@@ -247,21 +268,14 @@ export const createRun = withServerPromise(
 
           return {
             workflow_run_id: workflow_run[0].id,
-            message: "Successful workflow run",
+            message: "Workflow run initiated (timeout occurred but request may have succeeded)",
           };
-        } finally {
-          clearTimeout(timeoutId);
         }
-      } catch (error: any) {
-        lastError = error;
-        console.error(`Attempt ${attempt} failed:`, error);
-        
-        if (error instanceof TypeError || error.name === 'AbortError') {
-          break;
-        }
-        
+
+        // 如果还有重试机会，等待后重试
         if (attempt < MAX_RETRIES) {
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          await new Promise(resolve => setTimeout(resolve, Math.min(2000 * attempt, 6000)));
+          continue;
         }
       }
     }
