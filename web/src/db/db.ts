@@ -5,7 +5,7 @@ import * as schema from "./schema";
 const isDevContainer = process.env.REMOTE_CONTAINERS !== undefined;
 
 // if we're running locally
-if (process.env.VERCEL_ENV !== "production") {
+if (process.env.VERCEL_ENV !== "production" && process.env.ENVIRONMENT !== "cloudflare") {
   // Set the WebSocket proxy to work with the local instance
   if (isDevContainer) {
     // Running inside a VS Code devcontainer
@@ -20,6 +20,7 @@ if (process.env.VERCEL_ENV !== "production") {
   neonConfig.pipelineConnect = false;
 }
 
+// 标准 Neon PostgreSQL 连接
 export const db = neonDrizzle(
   new Pool({
     connectionString: process.env.POSTGRES_URL,

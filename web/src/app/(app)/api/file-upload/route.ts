@@ -12,6 +12,8 @@ const Request = z.object({
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60; // 改回 60 秒
+export const runtime = "edge"; // 添加 Edge 运行时标记
+export const preferredRegion = "auto";
 
 export async function GET(request: Request) {
   const [data, error] = await parseDataSafe(Request, request);

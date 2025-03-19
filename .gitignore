@@ -2,6 +2,23 @@ __pycache__
 .DS_Store
 file-hash-cache.json
 
+# 忽略 node_modules 目录
+node_modules/
+**/node_modules/
+
+# 忽略构建和缓存文件
+.next/
+.vercel/
+out/
+dist/
+build/
+.cache/
+
+# 忽略环境变量文件
+.env*.local
+.env.development
+.env.production
+
 #test
 test/
 test/api.test.ts

@@ -18,6 +18,11 @@ const Request = z.object({
   inputs: z.record(z.union([z.string(), z.number()])).optional(),
 });
 
+// 添加 Edge 运行时标记
+export const runtime = "edge";
+export const preferredRegion = "auto";
+export const dynamic = "force-dynamic";
+
 export async function POST(request: Request) {
   const [data, error] = await parseDataSafe(Request, request);
   if (!data || error) return error;

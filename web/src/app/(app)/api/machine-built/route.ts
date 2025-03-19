@@ -11,6 +11,10 @@ const Request = z.object({
   build_log: z.string().optional(),
 });
 
+export const runtime = "edge";
+export const preferredRegion = "auto";
+export const dynamic = "force-dynamic";
+
 export async function POST(request: Request) {
   const [data, error] = await parseDataSafe(Request, request);
   if (!data || error) return error;

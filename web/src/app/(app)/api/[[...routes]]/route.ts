@@ -15,16 +15,17 @@ import { registerGetStatusRoute } from "@/routes/registerGetStatusRoute";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60; // 60 seconds
+export const runtime = "nodejs"; // 使用 Node.js 运行时
 
 declare module "hono" {
   interface ContextVariableMap {
-    apiKeyTokenData: ReturnType<typeof parseJWT>;
+    apiKeyTokenData: Awaited<ReturnType<typeof parseJWT>>;
   }
 }
 
 async function checkAuth(c: Context, next: Next, headers?: HeadersInit) {
   const token = c.req.raw.headers.get("Authorization")?.split(" ")?.[1]; // Assuming token is sent as "Bearer your_token"
-  const userData = token ? parseJWT(token) : undefined;
+  const userData = token ? await parseJWT(token) : undefined;
   if (!userData || token === undefined) {
     return c.text("Invalid or expired token", {
       status: 401,

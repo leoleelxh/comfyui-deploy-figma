@@ -24,6 +24,10 @@ const UploadRequest = z.object({
   snapshot: snapshotType,
 });
 
+export const runtime = "edge";
+export const preferredRegion = "auto";
+export const dynamic = "force-dynamic";
+
 export async function OPTIONS(request: Request) {
   return new Response(null, {
     status: 204,
@@ -37,7 +41,7 @@ export async function OPTIONS(request: Request) {
 
 export async function POST(request: Request) {
   const token = request.headers.get("Authorization")?.split(" ")?.[1]; // Assuming token is sent as "Bearer your_token"
-  const userData = token ? parseJWT(token) : undefined;
+  const userData = token ? await parseJWT(token) : undefined;
   if (!userData) {
     return new NextResponse("Invalid or expired token", {
       status: 401,
