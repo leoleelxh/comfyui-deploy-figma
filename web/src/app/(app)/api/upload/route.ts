@@ -24,7 +24,7 @@ const UploadRequest = z.object({
   snapshot: snapshotType,
 });
 
-export const runtime = "edge";
+export const runtime = process.env.ENVIRONMENT === "cloudflare" ? "edge" : "nodejs";
 export const preferredRegion = "auto";
 export const dynamic = "force-dynamic";
 

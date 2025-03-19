@@ -15,7 +15,9 @@ import { registerGetStatusRoute } from "@/routes/registerGetStatusRoute";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60; // 60 seconds
-export const runtime = "nodejs"; // 使用 Node.js 运行时
+
+// 根据环境变量使用不同的运行时
+export const runtime = process.env.ENVIRONMENT === "cloudflare" ? "edge" : "nodejs";
 
 declare module "hono" {
   interface ContextVariableMap {

@@ -1,41 +1,112 @@
-# Cloudflare Pages 部署和开发指南
+# Cloudflare Pages 部署指南
 
-本文档提供了在 Cloudflare Pages 上部署和开发 ComfyUI Deploy 应用的详细指南。
+本文档提供了将 ComfyUI Deploy Figma 应用部署到 Cloudflare Pages 的详细步骤。
 
-## 环境准备
+## 准备工作
 
-### 需要的软件
+1. **Cloudflare 账户**：确保您有一个 Cloudflare 账户并已登录。
+2. **GitHub 仓库**：确保您的项目代码已推送到 GitHub 仓库。
+3. **环境变量**：准备好所有必要的环境变量，包括数据库连接信息、认证密钥等。
 
-- Node.js 18 或更高版本
-- npm 9 或更高版本
-- Wrangler CLI (`npm install -g wrangler`)
+## 部署步骤
 
-### 环境变量配置
+### 1. 配置 Cloudflare Pages 项目
 
-在 Cloudflare Pages 控制台中配置以下环境变量：
+1. 登录 Cloudflare 控制台。
+2. 导航到 **Pages** 部分。
+3. 点击 **创建一个项目**。
+4. 选择 **连接到 Git**。
+5. 选择您的 GitHub 账户并授权 Cloudflare 访问。
+6. 选择包含 ComfyUI Deploy Figma 应用的仓库。
+7. 配置构建设置：
+   - **项目名称**：`comfyui-deploy-figma`（或您喜欢的名称）
+   - **生产分支**：`main`（或您的主分支）
+   - **构建命令**：`cd web && npm install && npm run build`
+   - **构建输出目录**：`web/.vercel/output/static`
+   - **根目录**：留空（默认为仓库根目录）
+
+### 2. 配置环境变量
+
+在 Cloudflare Pages 项目设置中，添加以下环境变量：
 
 ```
-# 身份验证
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_xxx
-CLERK_SECRET_KEY=sk_xxx
-JWT_SECRET=your_jwt_secret
-
-# 存储配置
-SPACES_ENDPOINT="https://xxx.r2.cloudflarestorage.com"
-SPACES_ENDPOINT_CDN="https://pub-xxx.r2.dev"
-SPACES_BUCKET="your-bucket-name"
-SPACES_KEY="your-access-key"
-SPACES_SECRET="your-secret-key"
-SPACES_REGION="auto"
-SPACES_CDN_DONT_INCLUDE_BUCKET="true"
-SPACES_CDN_FORCE_PATH_STYLE="false"
-
-# Cloudflare 环境标识
-ENVIRONMENT="cloudflare"
-
-# 数据库配置
-POSTGRES_URL="your-database-url"
+ENVIRONMENT=cloudflare
+POSTGRES_URL=您的数据库连接URL
+POSTGRES_SSL=true
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=您的Clerk公钥
+CLERK_SECRET_KEY=您的Clerk密钥
+SPACES_ENDPOINT=您的存储端点
+SPACES_ENDPOINT_CDN=您的CDN端点
+SPACES_REGION=您的存储区域
+SPACES_BUCKET=您的存储桶名称
+SPACES_KEY=您的存储访问密钥
+SPACES_SECRET=您的存储秘密密钥
+SPACES_CDN_DONT_INCLUDE_BUCKET=true/false
+SPACES_CDN_FORCE_PATH_STYLE=true/false
+JWT_SECRET=您的JWT密钥
+NEXT_PUBLIC_POSTHOG_KEY=您的PostHog密钥
+NEXT_PUBLIC_POSTHOG_HOST=您的PostHog主机
+COMFYUI_BACKEND_URL=您的后端服务URL
 ```
+
+### 3. 部署项目
+
+1. 点击 **保存并部署**。
+2. Cloudflare Pages 将开始构建和部署您的应用。
+3. 构建完成后，您将获得一个 `*.pages.dev` 域名，可用于访问您的应用。
+
+### 4. 自定义域名设置（可选）
+
+如果您想使用自定义域名：
+
+1. 在项目的 **自定义域** 部分，点击 **设置自定义域**。
+2. 输入您想使用的域名。
+3. 按照 Cloudflare 提供的说明进行 DNS 配置。
+
+## 特殊注意事项
+
+### Edge Runtime 兼容性
+
+部署到 Cloudflare Pages 时，应用会在 Edge Runtime 中运行。以下功能已经适配：
+
+1. **API 路由**：所有 API 路由都标记为了 Edge 兼容。
+2. **JWT 验证**：使用 `jose` 库代替 `jsonwebtoken` 进行 JWT 验证。
+3. **数据库连接**：已适配 Cloudflare Workers 环境。
+
+### 部署后验证
+
+部署完成后，请验证以下功能是否正常工作：
+
+1. **认证流程**：确保用户可以正常登录和注册。
+2. **工作流创建和运行**：测试工作流的创建和执行。
+3. **文件上传和存储**：测试文件上传和访问功能。
+4. **API 端点**：测试所有 API 端点是否正常响应。
+
+## 故障排除
+
+如果部署后遇到问题：
+
+1. **检查日志**：在 Cloudflare Pages 控制台查看构建和运行时日志。
+2. **环境变量**：确保所有环境变量都已正确设置。
+3. **路由问题**：确保所有 API 路由都正确标记了 Edge 运行时。
+4. **数据库连接**：验证数据库连接字符串和授权信息是否正确。
+
+## 升级和更新
+
+当您需要更新应用时：
+
+1. 将更改推送到连接的 GitHub 仓库。
+2. Cloudflare Pages 会自动检测更改并重新部署。
+3. 如果需要，您可以在 Cloudflare Pages 控制台手动触发部署。
+
+## 回滚部署
+
+如果需要回滚到先前的部署：
+
+1. 在 Cloudflare Pages 控制台导航到您的项目。
+2. 转到 **部署** 选项卡。
+3. 找到您想回滚到的部署版本。
+4. 点击 **重新部署** 或 **回滚到此版本**。
 
 ## 本地开发
 
@@ -89,44 +160,6 @@ npm run cloudflare:verbose
 ```json
 "pages:dev": "wrangler pages dev .vercel/output/static --compatibility-date=2023-05-10 --compatibility-flag=nodejs_compat --port 3333"
 ```
-
-## 部署到 Cloudflare Pages
-
-### 使用 GitHub 集成
-
-1. 在 Cloudflare Pages 控制台创建新项目
-2. 选择你的 GitHub 仓库
-3. 配置构建设置：
-   - 构建命令：`cd web && npm install && npm run build`
-   - 输出目录：`web/.vercel/output/static`
-   - Node.js 版本：18
-4. 添加上面列出的环境变量
-5. 部署项目
-
-### 使用 Wrangler CLI 部署
-
-```bash
-# 构建项目
-cd web
-npm run build
-
-# 部署到 Cloudflare Pages
-npm run pages:deploy
-```
-
-## 问题排查
-
-### 构建失败
-
-- **Node.js 版本问题**：确保使用 Node.js 18+
-- **依赖冲突**：使用 `--legacy-peer-deps` 安装依赖
-- **模块不兼容**：检查是否有使用 Node.js 特定 API 的模块
-
-### 运行时错误
-
-- **Edge 运行时兼容性**：确保 API 路由使用正确的运行时（Edge 或 Node.js）
-- **存储连接问题**：验证 R2 存储配置
-- **数据库连接问题**：确保数据库连接字符串正确
 
 ## 本地和 Cloudflare 环境切换
 

@@ -52,17 +52,22 @@ const nextConfig = {
       };
     }
     
-    // 额外的兼容性调整
-    config.module = {
-      ...config.module,
-      noParse: [/\/node_modules\/jsonwebtoken\//]
-    };
+    // 不要排除jsonwebtoken，确保它被正确处理
+    if (config.module && config.module.noParse) {
+      const noParse = Array.isArray(config.module.noParse) 
+        ? config.module.noParse 
+        : [config.module.noParse];
+      
+      config.module.noParse = noParse.filter(pattern => 
+        !String(pattern).includes('jsonwebtoken')
+      );
+    }
     
     return config;
   },
-  // Cloudflare Pages 的额外配置
+  // 从环境中读取配置，不再硬编码
   env: {
-    ENVIRONMENT: "cloudflare",
+    // 不再硬编码 ENVIRONMENT 值
   },
 };
 
