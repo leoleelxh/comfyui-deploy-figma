@@ -1,6 +1,7 @@
 # Changelog
 
 All notable changes to this project will be documented in this file.
+恢复到可以正常部署的vercel版本，开始进行图片处理优化
 
 ## [released 1.2]
 
