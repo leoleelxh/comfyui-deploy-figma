@@ -27,16 +27,68 @@ ComfyUI Deploy 服务提供以下关键 API 端点：
 
 ## 身份验证
 
-所有 API 请求需要使用 API 密钥进行身份验证：
+### JWT Token Authentication
+
+The Figma plugin uses JWT token authentication for API access. This ensures secure communication between the plugin and the backend services.
+
+#### Token Usage
+
+1. Obtain a JWT token from the web application
+2. Include the token in all API requests:
 
 ```typescript
-const API_KEY = "your_api_key_here";
-
-// 设置通用请求头
 const headers = {
+  Authorization: `Bearer ${token}`,
   "Content-Type": "application/json",
-  Authorization: `Bearer ${API_KEY}`,
 };
+```
+
+#### API Endpoints
+
+The following endpoints require JWT token authentication:
+
+1. Get Pre-signed Upload URL
+
+```typescript
+// Request
+const response = await fetch("/api/get-presigned-upload-url", {
+  method: "POST",
+  headers: {
+    Authorization: `Bearer ${token}`,
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    fileType: "image/png",
+  }),
+});
+
+// Response
+{
+  presignedUrl: string; // URL for uploading the file
+  cdnUrl: string; // URL where the file will be accessible after upload
+  key: string; // File key in the storage
+  fileType: string; // MIME type of the file
+  extension: string; // File extension
+}
+```
+
+2. Other endpoints...
+
+#### Error Handling
+
+The API returns standard HTTP status codes:
+
+- 401 Unauthorized: Invalid or missing token
+- 403 Forbidden: Token revoked or insufficient permissions
+- 500 Internal Server Error: Server-side error
+
+Error response format:
+
+```typescript
+{
+  error: string;        // Error message
+  details?: string;     // Additional error details (if available)
+}
 ```
 
 ## 图片处理优化流程

@@ -1042,3 +1042,54 @@ For LocalStack setup:
 1. Create bucket: `aws --endpoint-url=http://localhost:4566 s3 mb s3://your-bucket-name`
 2. Create uploads directory: `aws --endpoint-url=http://localhost:4566 s3api put-object --bucket your-bucket-name --key uploads/`
 3. Set bucket public access: `aws --endpoint-url=http://localhost:4566 s3api put-bucket-policy --bucket your-bucket-name --policy '{"Version":"2012-10-17","Statement":[{"Sid":"PublicRead","Effect":"Allow","Principal":"*","Action":"s3:GetObject","Resource":"arn:aws:s3:::your-bucket-name/*"}]}'`
+
+## Authentication
+
+The application supports two authentication methods:
+
+1. Clerk Authentication (Web Application)
+
+   - Used for web application users
+   - Provides user management and session handling
+   - Required for accessing the web interface
+
+2. JWT Token Authentication (API/Plugin)
+   - Used for API access and Figma plugin
+   - Supports stateless authentication
+   - Includes token revocation capability
+   - Required for programmatic access
+
+### API Authentication
+
+API endpoints support both authentication methods:
+
+```typescript
+// Using JWT Token
+fetch("/api/endpoint", {
+  headers: {
+    Authorization: "Bearer your_jwt_token",
+  },
+});
+
+// Using Clerk (Web Application)
+// Clerk authentication is handled automatically by the web application
+```
+
+### CORS Support
+
+All API endpoints include proper CORS headers for cross-origin requests:
+
+```typescript
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+};
+```
+
+### Token Revocation
+
+JWT tokens can be revoked for security purposes. The system checks for token revocation on each request when:
+
+- The token doesn't have an expiration time
+- The token is used for API access

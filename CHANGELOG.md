@@ -1,7 +1,7 @@
 # Changelog
 
 All notable changes to this project will be documented in this file.
-恢复到可以正常部署的vercel版本，开始进行图片处理优化
+恢复到可以正常部署的 vercel 版本，开始进行图片处理优化
 
 ## [released 1.2]
 
@@ -15,7 +15,22 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
-### Fixed
+### Added
+
+- Added JWT token authentication support for API endpoints
+- Enhanced CORS support for cross-origin requests
+- Added token revocation check for API endpoints
+
+### Changed
+
+- Updated `get-presigned-upload-url` endpoint to support both JWT token and Clerk authentication
+- Improved error handling and response format for authentication failures
+- Standardized CORS headers across API endpoints
+
+### Security
+
+- Implemented proper authentication checks for file upload operations
+- Added token revocation verification for enhanced security
 
 - Fixed image URL format inconsistency:
 
