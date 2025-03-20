@@ -1,8 +1,9 @@
 import { db } from "@/db/db";
-import { workflowRunsTable, workflowRunOutputs } from "@/db/schema";
+import { workflowRunsTable } from "@/db/schema";
 import type { App } from "@/routes/app";
 import { authError } from "@/routes/authError";
-import { z, createRoute } from "@hono/zod-openapi";
+import { sanitizeOutput } from "@/server/sanitizeOutput";
+import { createRoute, z } from "@hono/zod-openapi";
 import { eq } from "drizzle-orm";
 
 // 定义路由
@@ -70,8 +71,14 @@ export const registerGetStatusRoute = (app: App) => {
         return c.json({ error: "Run not found" }, { status: 404 });
       }
 
+      // 清理输出数据，减少数据传输量
+      const sanitizedOutputs = run.outputs.map(output => ({
+        ...output,
+        data: sanitizeOutput(output.data)
+      }));
+
       // 处理图片输出
-      const imageOutputs = run.outputs.find(output => output.data?.images);
+      const imageOutputs = sanitizedOutputs.find(output => output.data?.images);
       const images = imageOutputs?.data?.images || [];
 
       // 构建响应
@@ -83,7 +90,7 @@ export const registerGetStatusRoute = (app: App) => {
         duration: run.ended_at ? 
           (new Date(run.ended_at).getTime() - new Date(run.started_at!).getTime()) / 1000 : 
           null,
-        outputs: run.outputs.map(output => ({
+        outputs: sanitizedOutputs.map(output => ({
           ...output.data,
           created_at: output.created_at
         })),
@@ -92,7 +99,7 @@ export const registerGetStatusRoute = (app: App) => {
           url: image.url || `${CDN_ENDPOINT}/outputs/runs/${run_id}/${image.filename}`,
           thumbnail_url: image.thumbnail_url || `${CDN_ENDPOINT}/outputs/runs/${run_id}/thumbnails/${image.filename}`
         })),
-        error: run.status === 'failed' ? run.outputs[run.outputs.length - 1]?.data?.error : undefined,
+        error: run.status === 'failed' ? sanitizedOutputs[sanitizedOutputs.length - 1]?.data?.error : undefined,
         progress: {
           current: run.status === 'success' ? 100 : 
                   run.status === 'failed' ? 0 :

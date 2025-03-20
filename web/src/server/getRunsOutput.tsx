@@ -10,9 +10,15 @@ export async function getRunsOutputDisplay(run_id: string) {
 }
 
 export async function getRunsOutput(run_id: string) {
-  // throw new Error("Not implemented");
+  // 修改查询，只获取必要字段，限制返回数量
   return await db
-    .select()
+    .select({
+      id: workflowRunOutputs.id,
+      created_at: workflowRunOutputs.created_at,
+      updated_at: workflowRunOutputs.updated_at,
+      data: workflowRunOutputs.data
+    })
     .from(workflowRunOutputs)
-    .where(eq(workflowRunOutputs.run_id, run_id));
+    .where(eq(workflowRunOutputs.run_id, run_id))
+    .limit(5); // 限制返回数量，减少数据库传输
 }
