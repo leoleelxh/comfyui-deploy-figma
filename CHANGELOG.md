@@ -1,9 +1,10 @@
 # Changelog
 
 All notable changes to this project will be documented in this file.
-## [released 1.2.1]
-恢复到刚 修复图片上传到存储再进行任务处理的流程 状态
 
+## [released 1.2.1]
+
+恢复到刚 修复图片上传到存储再进行任务处理的流程 状态
 
 ## [released 1.2]
 
@@ -263,3 +264,39 @@ aws --endpoint-url=http://172.26.61.86:4566 s3api put-bucket-acl --bucket comfyu
 - Added environment-aware URL path construction
   - Uses bucket name in path for LocalStack (`SPACES_CDN_FORCE_PATH_STYLE=true`)
   - Maintains clean URLs for R2 (`SPACES_CDN_FORCE_PATH_STYLE=false`)
+
+## [2.3.0] - 2023-11-12
+
+### 新增
+
+- **Cloudflare 部署支持**
+
+  - 添加了对 Cloudflare Pages 的完整部署支持
+  - 实现了条件运行时配置，根据环境自动选择 Edge 或 Node.js 运行时
+  - 添加`wrangler.toml`配置文件，支持 Cloudflare 部署
+  - 添加详细的 Cloudflare 部署文档
+
+- **图像处理优化**
+  - 新增预签名 URL API 端点(`/api/get-presigned-upload-url`)，实现 Figma 插件直接上传图像到 R2/S3
+  - 添加`isValidImageUrl`工具函数，用于识别和验证图像 URL
+  - 实现`sanitizeOutput`函数，自动清理数据中的大型属性
+  - 优化数据库查询，减少不必要的数据传输
+
+### 改进
+
+- **数据传输优化**
+
+  - 重构`getRunsData`和`getRunsOutput`，采用分步查询和数据清理
+  - 在 API 响应中清理大型数据字段，减少数据库传输
+  - 优化错误消息处理，限制过长的错误信息
+
+- **兼容性增强**
+  - 保持与 Vercel 等平台的完全向后兼容性
+  - 改进错误处理，提高系统稳定性
+  - 增加对图像 URL 的智能识别，支持不同格式的图像 URL
+
+### 文档
+
+- 添加详细的[技术实现文档](docs/technical-implementation.md)，包含架构图和实现细节
+- 添加[Figma 图像优化指南](docs/figma-image-optimization.md)，详细说明 Figma 插件如何使用优化的图像上传流程
+- 添加[Cloudflare 部署文档](docs/cloudflare-deployment.md)，提供完整的部署步骤和最佳实践

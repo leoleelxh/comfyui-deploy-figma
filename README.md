@@ -1042,3 +1042,29 @@ For LocalStack setup:
 1. Create bucket: `aws --endpoint-url=http://localhost:4566 s3 mb s3://your-bucket-name`
 2. Create uploads directory: `aws --endpoint-url=http://localhost:4566 s3api put-object --bucket your-bucket-name --key uploads/`
 3. Set bucket public access: `aws --endpoint-url=http://localhost:4566 s3api put-bucket-policy --bucket your-bucket-name --policy '{"Version":"2012-10-17","Statement":[{"Sid":"PublicRead","Effect":"Allow","Principal":"*","Action":"s3:GetObject","Resource":"arn:aws:s3:::your-bucket-name/*"}]}'`
+
+## 新特性与优化
+
+### Cloudflare 兼容性与部署
+
+现在 ComfyUI Deploy 完全支持部署到 Cloudflare Pages，同时保持与 Vercel 等平台的向后兼容性。关键特性包括：
+
+- **多平台运行时适配**：根据环境自动选择合适的运行时（Edge 或 Node.js）
+- **简化部署流程**：支持通过 GitHub 集成或 Wrangler CLI 部署
+- **适配 Edge 环境**：优化 API 路由和数据处理，确保在 Edge 环境中正常运行
+
+详细的部署指南请参考[Cloudflare 部署文档](docs/cloudflare-deployment.md)。
+技术实现细节可查看[技术实现文档](docs/technical-implementation.md#cloudflare部署适配)。
+
+### 图像处理优化
+
+为提高性能和减少资源消耗，实现了图像处理优化：
+
+- **预签名 URL 上传**：Figma 插件可直接上传图像到 R2/S3 存储，减少约 99.9%的数据传输量
+- **数据清理机制**：自动移除不必要的大型数据字段，减少数据库存储压力
+- **查询优化**：实现增量加载和数据限制，提高响应速度
+
+这些优化显著提高了系统性能，减少了 API 超时风险，同时降低了服务器资源消耗。
+
+详细的技术实现请参考[技术实现文档](docs/technical-implementation.md#图像处理优化)，
+Figma 插件开发者可参考[Figma 图像优化指南](docs/figma-image-optimization.md)。
