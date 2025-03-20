@@ -1,5 +1,5 @@
 import { db } from "@/db/db";
-import { workflowRunOutputs, workflowRuns } from "@/db/schema";
+import { workflowRunOutputs, workflowRunsTable } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { setTimeout } from "timers/promises";
@@ -128,8 +128,8 @@ async function cleanupOutputData(run_id: string): Promise<void> {
  */
 async function cleanupInputData(run_id: string): Promise<void> {
   // 查询工作流运行记录
-  const runRecord = await db.query.workflowRuns.findFirst({
-    where: eq(workflowRuns.id, run_id)
+  const runRecord = await db.query.workflowRunsTable.findFirst({
+    where: eq(workflowRunsTable.id, run_id)
   });
   
   if (!runRecord || !runRecord.workflow_inputs) {
@@ -177,9 +177,9 @@ async function cleanupInputData(run_id: string): Promise<void> {
   
   // 只有在有变更时才更新数据库
   if (hasChanges) {
-    await db.update(workflowRuns)
+    await db.update(workflowRunsTable)
       .set({ workflow_inputs: cleanedInputs })
-      .where(eq(workflowRuns.id, run_id));
+      .where(eq(workflowRunsTable.id, run_id));
     
     console.log(`成功清理了run_id=${run_id}的输入数据中的图片`);
   } else {
