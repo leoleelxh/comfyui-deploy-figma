@@ -17,6 +17,7 @@ import "server-only";
 import { v4 } from "uuid";
 import { withServerPromise } from "./withServerPromise";
 import { uploadBase64Image } from "./uploadBase64Image";
+import { isValidImageUrl } from "./isValidImageUrl";
 
 export const createRun = withServerPromise(
   async ({
@@ -98,14 +99,26 @@ export const createRun = withServerPromise(
           if (node.inputs["input_id"] === key) {
             if (node.class_type === "ComfyUIDeployExternalImage") {
               const value = inputs[key];
-              if (typeof value === 'string' && value.startsWith('data:image')) {
-                console.log(`Processing image upload for key: ${key}`);
-                uploadPromises.push(
-                  uploadBase64Image(value).then(url => {
-                    console.log(`Image uploaded successfully, URL: ${url}`);
-                    node.inputs["input_id"] = url;
-                  })
-                );
+              if (typeof value === 'string') {
+                // 使用isValidImageUrl函数检查是否为有效的图像URL
+                if (isValidImageUrl(value)) {
+                  console.log(`Using valid image URL for key: ${key}: ${value}`);
+                  // 直接使用URL，不需要上传
+                  node.inputs["input_id"] = value;
+                } else if (value.startsWith('data:image')) {
+                  // 如果是base64数据，则上传处理（保持原有逻辑）
+                  console.log(`Processing image upload for key: ${key}`);
+                  uploadPromises.push(
+                    uploadBase64Image(value).then(url => {
+                      console.log(`Image uploaded successfully, URL: ${url}`);
+                      node.inputs["input_id"] = url;
+                    })
+                  );
+                } else {
+                  // 不是URL也不是base64，可能是其他格式
+                  console.warn(`Unknown image format for key: ${key}`);
+                  node.inputs["input_id"] = value;
+                }
               }
             } else {
               node.inputs["input_id"] = inputs[key];

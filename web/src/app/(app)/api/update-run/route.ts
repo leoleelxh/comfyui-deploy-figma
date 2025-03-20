@@ -25,7 +25,7 @@ export const preferredRegion = "auto";
 export const dynamic = "force-dynamic";
 
 // 添加一个函数用于彻底清理图像数据
-function sanitizeImageData(images) {
+function sanitizeImageData(images: any[]): any[] {
   if (!images || !Array.isArray(images)) return images;
   
   for (const image of images) {
