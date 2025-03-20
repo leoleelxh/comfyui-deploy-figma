@@ -1,22 +1,22 @@
 /**
- * 工具函数：清理输出数据以减少数据库传输
- * 此函数移除输出数据中的大型属性，保留必要的元数据
+ * 工具函数：清理运行数据以减少数据库存储压力
+ * 此函数移除输入输出数据中的大型属性，保留必要的元数据
  */
-export function sanitizeOutput(outputData: any): any {
+export function sanitizeRunData(data: any): any {
   // 如果不是对象或者是空值，直接返回
-  if (!outputData || typeof outputData !== 'object') {
-    return outputData;
+  if (!data || typeof data !== 'object') {
+    return data;
   }
   
   // 处理数组
-  if (Array.isArray(outputData)) {
-    return outputData.map(item => sanitizeOutput(item));
+  if (Array.isArray(data)) {
+    return data.map(item => sanitizeRunData(item));
   }
   
   // 处理对象
-  const result = { ...outputData };
+  const result = { ...data };
   
-  // 清理可能包含大型数据的字段
+  // 清理输出数据中的图片
   if (result.images && Array.isArray(result.images)) {
     result.images = result.images.map((image: any) => {
       const cleanImage = { ...image };
@@ -37,6 +37,17 @@ export function sanitizeOutput(outputData: any): any {
       }
       
       return cleanImage;
+    });
+  }
+
+  // 清理输入数据中的base64
+  if (result.inputs && typeof result.inputs === 'object') {
+    Object.keys(result.inputs).forEach(key => {
+      const value = result.inputs[key];
+      if (typeof value === 'string' && value.startsWith('data:')) {
+        // 将base64替换为标记，表示这里曾经有图片数据
+        result.inputs[key] = '[IMAGE DATA CLEANED]';
+      }
     });
   }
   

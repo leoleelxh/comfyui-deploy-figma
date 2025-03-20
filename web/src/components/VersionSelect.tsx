@@ -285,7 +285,7 @@ export function RunWorkflowButton({
     setIsLoading(true);
     try {
       const origin = window.location.origin;
-      await callServerPromise(
+      const res = await callServerPromise(
         createRun({
           origin,
           workflow_version_id,
@@ -294,7 +294,31 @@ export function RunWorkflowButton({
           runOrigin: "manual",
         }),
       );
-      // console.log(res.json());
+
+      if (res && 'workflow_run_id' in res) {
+        const pollStatus = setInterval(async () => {
+          const status = await checkStatus(res.workflow_run_id);
+          if (status && ['success', 'failed', 'error'].includes(status.status)) {
+            clearInterval(pollStatus);
+            
+            try {
+              await fetch(`${origin}/api/cleanup-run-data`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  run_id: res.workflow_run_id,
+                  delay_seconds: 60
+                })
+              });
+            } catch (error) {
+              console.error('清理数据时出错:', error);
+            }
+          }
+        }, 2000);
+      }
+
       setIsLoading(false);
     } catch (error) {
       setIsLoading(false);
