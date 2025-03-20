@@ -3,6 +3,8 @@ import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { v4 as uuidv4 } from "uuid";
 import { auth } from "@clerk/nextjs";
+import { parseJWT } from "@/server/parseJWT";
+import { isKeyRevoked } from "@/server/curdApiKeys";
 
 // 根据环境变量使用不同的运行时
 export const runtime = process.env.ENVIRONMENT === "cloudflare" ? "edge" : "nodejs";
@@ -34,16 +36,41 @@ const s3Client = new S3Client({
 });
 
 export async function POST(request: Request) {
-  // 身份验证
-  const { userId, orgId } = auth();
-  if (!userId && !process.env.DISABLE_AUTH) {
-    return NextResponse.json({ error: "Unauthorized" }, { 
-      status: 401,
-      headers: corsHeaders
-    });
-  }
-
   try {
+    // 身份验证
+    const { userId } = auth();
+    const token = request.headers.get("Authorization")?.split(" ")?.[1];
+    
+    // 如果没有 token，检查 Clerk auth
+    if (!token) {
+      if (!userId && !process.env.DISABLE_AUTH) {
+        return NextResponse.json({ error: "Unauthorized" }, { 
+          status: 401,
+          headers: corsHeaders
+        });
+      }
+    } else {
+      // 验证 JWT token
+      const userData = token ? parseJWT(token) : undefined;
+      if (!userData || token === undefined) {
+        return NextResponse.json({ error: "Invalid or expired token" }, {
+          status: 401,
+          headers: corsHeaders
+        });
+      }
+
+      // 如果 token 没有过期时间，检查是否被撤销
+      if (userData.exp === undefined) {
+        const revokedKey = await isKeyRevoked(token);
+        if (revokedKey) {
+          return NextResponse.json({ error: "Revoked token" }, {
+            status: 401,
+            headers: corsHeaders
+          });
+        }
+      }
+    }
+
     // 获取请求参数
     const data = await request.json().catch(() => ({}));
     const fileType = data.fileType || "image/png";

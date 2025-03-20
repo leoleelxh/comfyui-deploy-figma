@@ -28,7 +28,7 @@ export async function OPTIONS() {
  */
 async function autoCleanupOldData(): Promise<void> {
   try {
-    const TWO_HOURS = 2 * 60 * 60 * 1000; // 2小时的毫秒数
+    const TWO_HOURS = 1 * 60 * 1000; // 2小时的毫秒数
     const cutoffTime = new Date(Date.now() - TWO_HOURS);
 
     // 查找超过2小时的运行记录
