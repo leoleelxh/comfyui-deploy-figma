@@ -5,7 +5,33 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { TableCell } from "@/components/ui/table";
 import { type findAllRuns } from "@/server/findAllRuns";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
+
+/**
+ * 调用清理API，在工作流运行成功后延迟指定时间清理数据
+ */
+async function callCleanupAPI(runId: string, delaySeconds: number = 60) {
+  try {
+    const response = await fetch('/api/cleanup-run-data', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        run_id: runId,
+        delay_seconds: delaySeconds
+      })
+    });
+
+    if (!response.ok) {
+      console.error('清理API调用失败:', await response.text());
+    } else {
+      console.log(`已安排在${delaySeconds}秒后清理run_id=${runId}的数据`);
+    }
+  } catch (error) {
+    console.error('清理API调用出错:', error);
+  }
+}
 
 export function LiveStatus({
   run,
@@ -20,6 +46,7 @@ export function LiveStatus({
   );
 
   let status = run.status;
+  const cleanupCalledRef = useRef(false);
 
   // const [view, setView] = useState<any>();
   // if (data?.json.event == "executing" && data.json.data.node == undefined) {
@@ -46,6 +73,14 @@ export function LiveStatus({
       router.refresh();
     }
   }, [data?.json.event]);
+
+  // 当状态变为success时，调用清理API
+  useEffect(() => {
+    if (status === "success" && !cleanupCalledRef.current) {
+      cleanupCalledRef.current = true; // 标记为已调用，防止重复调用
+      callCleanupAPI(run.id);
+    }
+  }, [status, run.id]);
 
   return (
     <>
