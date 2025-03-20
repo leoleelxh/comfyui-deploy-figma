@@ -74,9 +74,9 @@ export function LiveStatus({
     }
   }, [data?.json.event]);
 
-  // 当状态变为success时，调用清理API
+  // 当状态变为success或failed时，调用清理API
   useEffect(() => {
-    if (status === "success" && !cleanupCalledRef.current) {
+    if ((status === "success" || status === "failed") && !cleanupCalledRef.current) {
       cleanupCalledRef.current = true; // 标记为已调用，防止重复调用
       callCleanupAPI(run.id);
     }
